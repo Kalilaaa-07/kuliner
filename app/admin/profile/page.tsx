@@ -2,55 +2,208 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Phone, Shield, User, Sparkles, LogOut } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  Shield,
+  User,
+  Sparkles,
+  LogOut,
+  Loader2,
+} from "lucide-react";
+import { getCookie, removeCookies } from "@/lib/client-cookie";
 import EditAdminProfile from "./edit";
+import ResetPasswordAdmin from "./reset-password";
 
 export type AdminProfile = {
+  id?: number;
   name: string;
   email: string;
   phone: string;
   role: string;
 };
 
+function getToken() {
+  return getCookie("accesstoken") || getCookie("accessToken");
+}
+
+function getProfileData(result: any): any {
+  return (
+    result?.data?.user ||
+    result?.data?.admin ||
+    result?.data?.profile ||
+    result?.data ||
+    result?.user ||
+    result?.admin ||
+    result?.profile ||
+    result
+  );
+}
+
+function getSavedAdminProfile(): Partial<AdminProfile> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const saved = localStorage.getItem("adminProfile");
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeAdminProfile(result: any): AdminProfile {
+  const data = getProfileData(result);
+  const savedProfile = getSavedAdminProfile();
+
+  const possibleUser = result?.data?.user || result?.user || {};
+  const possibleAdmin = result?.data?.admin || result?.admin || {};
+  const possibleProfile = result?.data?.profile || result?.profile || {};
+
+  const id =
+    data?.id ||
+    possibleAdmin?.id ||
+    possibleProfile?.id ||
+    possibleUser?.id ||
+    savedProfile?.id;
+
+  const name =
+    data?.name ||
+    data?.fullName ||
+    data?.username ||
+    possibleAdmin?.name ||
+    possibleAdmin?.fullName ||
+    possibleAdmin?.username ||
+    possibleProfile?.name ||
+    possibleProfile?.fullName ||
+    possibleProfile?.username ||
+    possibleUser?.name ||
+    possibleUser?.fullName ||
+    possibleUser?.username ||
+    savedProfile?.name ||
+    "Admin";
+
+  const email =
+    data?.email ||
+    possibleAdmin?.email ||
+    possibleProfile?.email ||
+    possibleUser?.email ||
+    savedProfile?.email ||
+    "";
+
+  const phone =
+    data?.phone ||
+    data?.phoneNumber ||
+    data?.whatsappNumber ||
+    data?.noHp ||
+    data?.telephone ||
+    possibleAdmin?.phone ||
+    possibleAdmin?.phoneNumber ||
+    possibleAdmin?.whatsappNumber ||
+    possibleAdmin?.noHp ||
+    possibleAdmin?.telephone ||
+    possibleProfile?.phone ||
+    possibleProfile?.phoneNumber ||
+    possibleProfile?.whatsappNumber ||
+    possibleProfile?.noHp ||
+    possibleProfile?.telephone ||
+    possibleUser?.phone ||
+    possibleUser?.phoneNumber ||
+    possibleUser?.whatsappNumber ||
+    possibleUser?.noHp ||
+    possibleUser?.telephone ||
+    savedProfile?.phone ||
+    "";
+
+  const role =
+    data?.role ||
+    possibleAdmin?.role ||
+    possibleProfile?.role ||
+    possibleUser?.role ||
+    savedProfile?.role ||
+    "ADMIN";
+
+  return {
+    id,
+    name,
+    email,
+    phone,
+    role,
+  };
+}
+
 export default function AdminProfilePage() {
   const router = useRouter();
 
   const [profile, setProfile] = useState<AdminProfile>({
+    id: undefined,
     name: "",
     email: "",
     phone: "",
-    role: "Admin",
+    role: "ADMIN",
   });
 
-  useEffect(() => {
-    const savedProfile = localStorage.getItem("adminProfile");
+  const [loading, setLoading] = useState<boolean>(true);
 
-    if (savedProfile) {
-      setProfile(JSON.parse(savedProfile));
-    } else {
-      const defaultProfile = {
-        name: "Admin NutriCare",
-        email: "admin@nutricare.com",
-        phone: "081234567890",
-        role: "Admin",
-      };
+  async function getAdminProfile() {
+    try {
+      setLoading(true);
 
-      setProfile(defaultProfile);
-      localStorage.setItem("adminProfile", JSON.stringify(defaultProfile));
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+
+      if (!baseUrl) {
+        alert("NEXT_PUBLIC_BASE_API_URL belum diisi");
+        return;
+      }
+
+      const token = getToken();
+
+      if (!token) {
+        router.push("/sign-in");
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}/auth/me`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.message || "Gagal mengambil profile admin");
+
+        if (response.status === 401 || response.status === 403) {
+          handleLogout(false);
+        }
+
+        return;
+      }
+
+      const profileData = normalizeAdminProfile(result);
+
+      setProfile(profileData);
+      localStorage.setItem("adminProfile", JSON.stringify(profileData));
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat mengambil profile admin");
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }
 
-  function handleLogout() {
-    const confirmLogout = confirm("Yakin ingin log out?");
+  function handleLogout(withConfirm = true) {
+    if (withConfirm) {
+      const confirmLogout = confirm("Yakin ingin log out?");
+      if (!confirmLogout) return;
+    }
 
-    if (!confirmLogout) return;
-
-    document.cookie =
-      "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie =
-      "accesstoken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie =
-      "role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    removeCookies("accessToken");
+    removeCookies("accesstoken");
+    removeCookies("role");
 
     localStorage.removeItem("adminProfile");
     localStorage.removeItem("user");
@@ -61,6 +214,10 @@ export default function AdminProfilePage() {
 
     router.push("/sign-in");
   }
+
+  useEffect(() => {
+    getAdminProfile();
+  }, []);
 
   const detailCards = [
     {
@@ -80,10 +237,34 @@ export default function AdminProfilePage() {
     },
     {
       label: "Role",
-      value: profile.role || "Admin",
+      value: profile.role || "ADMIN",
       icon: Shield,
     },
   ];
+
+  if (loading) {
+    return (
+      <div
+        className="flex min-h-screen items-center justify-center px-4"
+        style={{
+          background:
+            "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 60%, #f4f8e8 100%)",
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        <div
+          className="flex flex-col items-center rounded-3xl bg-white px-8 py-7 text-center shadow-sm"
+          style={{ border: "0.5px solid #d3e2a0" }}
+        >
+          <Loader2 className="mb-3 animate-spin text-[#6B8E23]" size={34} />
+
+          <p className="text-sm font-bold text-[#1e2a04]">
+            Memuat profile admin...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -96,8 +277,8 @@ export default function AdminProfilePage() {
     >
       <div className="mx-auto w-full max-w-7xl space-y-6">
         {/* HEADER */}
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
             <p className="mb-1 text-xs font-bold uppercase tracking-[0.25em] text-[#6B8E23]">
               Admin Panel
             </p>
@@ -109,27 +290,29 @@ export default function AdminProfilePage() {
               Profile Admin
             </h1>
 
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6B705C]">
+            <p className="mt-2 text-sm leading-6 text-[#6B705C]">
               Kelola informasi akun administrator NutriCare dengan tampilan yang
               rapi dan mudah dibaca.
             </p>
           </div>
 
-          <div className="flex w-fit flex-wrap items-center gap-3">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
             <EditAdminProfile selectedData={profile} onSuccess={setProfile} />
+
+            <ResetPasswordAdmin />
 
             <button
               type="button"
-              onClick={handleLogout}
-              className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0"
+              onClick={() => handleLogout(true)}
+              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-bold text-white transition hover:-translate-y-0.5 active:translate-y-0"
               style={{
                 background: "linear-gradient(135deg, #9b2226, #c1121f)",
                 border: "0.5px solid #7f1d1d",
                 fontFamily: "'DM Sans', sans-serif",
-                boxShadow: "0 2px 8px #9b222630",
+                boxShadow: "0 4px 12px #9b222630",
               }}
             >
-              <LogOut size={16} strokeWidth={2.5} />
+              <LogOut size={15} strokeWidth={2.5} />
               Log Out
             </button>
           </div>
@@ -147,43 +330,31 @@ export default function AdminProfilePage() {
           <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10" />
           <div className="absolute bottom-0 right-16 h-28 w-28 rounded-full bg-white/10" />
 
-          <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_1.2fr] xl:items-center">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] bg-white/90 text-[#6B8E23] shadow-sm sm:h-28 sm:w-28">
-                <User size={52} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="mb-2 flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#d7efaa] backdrop-blur">
-                  <Sparkles size={13} />
-                  Administrator
-                </p>
-
-                <h2
-                  className="break-words text-3xl font-bold text-white sm:text-4xl"
-                  style={{ fontFamily: "'Playfair Display', serif" }}
-                >
-                  {profile.name || "Admin"}
-                </h2>
-
-                <p className="mt-2 break-all text-sm leading-6 text-[#e7f5c9]">
-                  {profile.email || "Email belum diisi"}
-                </p>
-              </div>
+          <div className="relative z-10 flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] bg-white/90 text-[#6B8E23] shadow-sm sm:h-28 sm:w-28">
+              <User size={52} />
             </div>
 
-            <div className="flex justify-start xl:justify-end">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex w-fit items-center gap-2 rounded-2xl bg-white/15 px-5 py-3 text-sm font-bold text-white backdrop-blur transition hover:scale-105 hover:bg-white/20"
-                style={{
-                  border: "0.5px solid #ffffff40",
-                }}
+            <div className="min-w-0">
+              <p className="mb-2 flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#d7efaa] backdrop-blur">
+                <Sparkles size={13} />
+                Administrator
+              </p>
+
+              <h2
+                className="break-words text-3xl font-bold text-white sm:text-4xl"
+                style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                <LogOut size={17} />
-                Log Out
-              </button>
+                {profile.name || "Admin"}
+              </h2>
+
+              <p className="mt-2 break-all text-sm leading-6 text-[#e7f5c9]">
+                {profile.email || "Email belum diisi"}
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-[#e7f5c9]">
+                {profile.phone || "No. telepon belum diisi"}
+              </p>
             </div>
           </div>
         </div>
@@ -209,14 +380,10 @@ export default function AdminProfilePage() {
                 </h2>
 
                 <p className="text-xs font-medium text-[#8a9a62]">
-                  Data profile admin yang sedang digunakan.
+                  Data profile admin yang sedang login.
                 </p>
               </div>
             </div>
-
-            <span className="w-fit rounded-full bg-[#e8f0c8] px-3 py-1 text-xs font-bold text-[#4e6b12]">
-              Local Profile
-            </span>
           </div>
 
           <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">

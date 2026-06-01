@@ -50,6 +50,10 @@ function getProfileData(result: any): CustomerProfile {
   );
 }
 
+function getToken() {
+  return getCookie("accesstoken") || getCookie("accessToken");
+}
+
 export default function CustomerProfilePage() {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,7 +69,7 @@ export default function CustomerProfilePage() {
         return;
       }
 
-      const token = getCookie("accesstoken");
+      const token = getToken();
 
       if (!token) {
         window.location.href = "/sign-in";
@@ -84,7 +88,15 @@ export default function CustomerProfilePage() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.message || "Gagal mengambil data profile");
+        alert(result?.message || "Gagal mengambil data profile customer");
+
+        if (response.status === 401 || response.status === 403) {
+          removeCookies("accesstoken");
+          removeCookies("accessToken");
+          removeCookies("role");
+          window.location.href = "/sign-in";
+        }
+
         return;
       }
 
@@ -100,7 +112,15 @@ export default function CustomerProfilePage() {
 
   function handleLogout() {
     removeCookies("accesstoken");
+    removeCookies("accessToken");
     removeCookies("role");
+
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("accesstoken");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    localStorage.removeItem("profile");
+
     window.location.href = "/sign-in";
   }
 
@@ -136,10 +156,9 @@ export default function CustomerProfilePage() {
   }
 
   const locationText =
-    profile?.fullAddress ||
-    (profile?.city?.name
-      ? `${profile?.city?.province?.name || ""}, ${profile.city.name}`
-      : "-");
+    profile?.city?.name && profile?.city?.province?.name
+      ? `${profile.city.province.name}, ${profile.city.name}`
+      : profile?.city?.name || profile?.fullAddress || "-";
 
   const avatarLetter = profile?.name?.charAt(0)?.toUpperCase() || "C";
 

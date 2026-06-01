@@ -257,7 +257,7 @@ export default function EditPlan({
                   className="mt-0.5 text-xs"
                   style={{ color: "#8a9a62" }}
                 >
-                  Perbarui data paket catering sesuai format backend.
+                  Perbarui data paket catering sesuai format.
                 </DialogDescription>
               </div>
             </div>
