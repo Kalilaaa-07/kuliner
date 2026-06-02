@@ -685,23 +685,23 @@ export default function AdminSubscriptionsPage() {
 
                   <thead className="bg-[#E8EED0]">
                     <tr>
-                      <th className="border-b border-[#DDE5C2] px-3 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-3 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Customer
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] px-3 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Plan
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] px-3 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Tanggal
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] px-3 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Address
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] px-3 py-3 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Action
                       </th>
                     </tr>

@@ -3,6 +3,7 @@
 import { getCookie } from "@/lib/client-cookie";
 import { FormEvent, useState } from "react";
 import {
+  AlertCircle,
   CalendarDays,
   CheckCircle2,
   MapPin,
@@ -38,12 +39,48 @@ type CustomerProfile = {
   city?: City;
 };
 
+type SubscriptionItem = {
+  id?: number;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  durationDays?: number | string;
+  cateringPlanId?: number | string;
+  planId?: number | string;
+  cateringPlan?: {
+    id?: number | string;
+    name?: string;
+  };
+  plan?: {
+    id?: number | string;
+    name?: string;
+  };
+  [key: string]: any;
+};
+
 type SubscribePlanProps = {
   planId: number;
   planName: string;
   duration: number;
   profile?: CustomerProfile | null;
 };
+
+function getToken() {
+  return (
+    getCookie("accesstoken") ||
+    getCookie("accessToken") ||
+    getCookie("token") ||
+    ""
+  );
+}
+
+async function getJsonSafe(response: Response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+}
 
 function getProfileData(result: any): CustomerProfile {
   return (
@@ -52,8 +89,131 @@ function getProfileData(result: any): CustomerProfile {
     result?.data ||
     result?.user ||
     result?.profile ||
-    result
+    result ||
+    {}
   );
+}
+
+function getArrayData(result: any): SubscriptionItem[] {
+  const data =
+    result?.data?.subscriptions ||
+    result?.data?.data ||
+    result?.data?.items ||
+    result?.data ||
+    result?.subscriptions ||
+    result?.items ||
+    result;
+
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+function getErrorMessage(result: any, fallback: string) {
+  if (Array.isArray(result?.message)) {
+    return result.message.join(", ");
+  }
+
+  if (typeof result?.message === "string") {
+    return result.message;
+  }
+
+  if (typeof result?.error === "string") {
+    return result.error;
+  }
+
+  return fallback;
+}
+
+function normalizeDateOnly(date: Date) {
+  const newDate = new Date(date);
+  newDate.setHours(0, 0, 0, 0);
+  return newDate;
+}
+
+function formatDate(date?: string | Date | null) {
+  if (!date) return "-";
+
+  const dateValue = new Date(date);
+
+  if (Number.isNaN(dateValue.getTime())) {
+    return "-";
+  }
+
+  return dateValue.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function getPlanIdFromSubscription(subscription: SubscriptionItem) {
+  return (
+    subscription?.cateringPlanId ||
+    subscription?.cateringPlan?.id ||
+    subscription?.planId ||
+    subscription?.plan?.id
+  );
+}
+
+function getEndDateFromSubscription(subscription: SubscriptionItem) {
+  if (subscription?.endDate) {
+    const endDate = new Date(subscription.endDate);
+
+    if (!Number.isNaN(endDate.getTime())) {
+      return endDate;
+    }
+  }
+
+  if (subscription?.startDate && subscription?.durationDays) {
+    const startDate = new Date(subscription.startDate);
+
+    if (Number.isNaN(startDate.getTime())) {
+      return null;
+    }
+
+    const calculatedEndDate = new Date(startDate);
+    calculatedEndDate.setDate(
+      calculatedEndDate.getDate() + Number(subscription.durationDays)
+    );
+
+    return calculatedEndDate;
+  }
+
+  return null;
+}
+
+function isInactiveStatus(status?: string) {
+  const value = String(status || "").toLowerCase();
+
+  return [
+    "cancelled",
+    "canceled",
+    "cancel",
+    "completed",
+    "complete",
+    "done",
+    "finished",
+    "expired",
+    "rejected",
+    "failed",
+  ].includes(value);
+}
+
+function isSubscriptionStillActive(subscription: SubscriptionItem) {
+  if (isInactiveStatus(subscription?.status)) {
+    return false;
+  }
+
+  const endDate = getEndDateFromSubscription(subscription);
+
+  if (!endDate || Number.isNaN(endDate.getTime())) {
+    return false;
+  }
+
+  const today = normalizeDateOnly(new Date());
+  const subscriptionEndDate = normalizeDateOnly(endDate);
+
+  return subscriptionEndDate >= today;
 }
 
 export default function SubscribePlan({
@@ -62,33 +222,60 @@ export default function SubscribePlan({
   duration,
   profile: initialProfile,
 }: SubscribePlanProps) {
-  const [open, setOpen] = useState<boolean>(false);
+  const [open, setOpen] = useState(false);
 
   const [profile, setProfile] = useState<CustomerProfile | null>(
     initialProfile || null
   );
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [loadingProfile, setLoadingProfile] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
 
   const locationText =
     profile?.fullAddress ||
     (profile?.city?.name
-      ? `${profile?.city?.province?.name || ""}, ${profile.city.name}`
+      ? `${profile?.city?.province?.name || ""}${
+          profile?.city?.province?.name ? ", " : ""
+        }${profile.city.name}`
+      : profile?.cityId
+      ? `City ID: ${profile.cityId}`
       : "-");
+
+  async function fetchWithFallback(urls: string[], options: RequestInit) {
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, options);
+        const result = await getJsonSafe(response);
+
+        if (response.ok) {
+          return { response, result };
+        }
+
+        if (response.status !== 404) {
+          return { response, result };
+        }
+      } catch (error) {
+        console.error("Fetch gagal:", url, error);
+      }
+    }
+
+    return null;
+  }
 
   async function getProfile() {
     try {
       setLoadingProfile(true);
-
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
+      setNotice("");
 
       if (!baseUrl) {
-        alert("NEXT_PUBLIC_BASE_API_URL belum diisi");
+        setNotice("NEXT_PUBLIC_BASE_API_URL belum diisi.");
         return;
       }
 
-      const token = getCookie("accesstoken");
+      const token = getToken();
 
       if (!token) {
         alert("Token tidak ditemukan. Silakan login ulang.");
@@ -96,19 +283,26 @@ export default function SubscribePlan({
         return;
       }
 
-      const response = await fetch(`${baseUrl}/users/me`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      });
+      const request = await fetchWithFallback(
+        [`${baseUrl}/auth/me`, `${baseUrl}/users/me`],
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        }
+      );
 
-      const result = await response.json();
+      if (!request) {
+        setNotice("Gagal mengambil profile. Endpoint profile tidak ditemukan.");
+        return;
+      }
+
+      const { response, result } = request;
 
       if (!response.ok) {
-        alert(result.message || "Gagal mengambil data profile");
+        setNotice(getErrorMessage(result, "Gagal mengambil data profile."));
         return;
       }
 
@@ -126,13 +320,70 @@ export default function SubscribePlan({
       });
     } catch (error) {
       console.error(error);
-      alert("Terjadi kesalahan saat mengambil profile");
+      setNotice("Terjadi kesalahan saat mengambil profile.");
     } finally {
       setLoadingProfile(false);
     }
   }
 
+  async function getMySubscriptions() {
+    if (!baseUrl) {
+      throw new Error("NEXT_PUBLIC_BASE_API_URL belum diisi.");
+    }
+
+    const token = getToken();
+
+    if (!token) {
+      throw new Error("Token tidak ditemukan. Silakan login ulang.");
+    }
+
+    const request = await fetchWithFallback(
+      [
+        `${baseUrl}/subscriptions/my-subscriptions`,
+        `${baseUrl}/subscriptions/my`,
+        `${baseUrl}/subscriptions`,
+      ],
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!request) {
+      throw new Error("Endpoint subscription tidak ditemukan.");
+    }
+
+    const { response, result } = request;
+
+    if (!response.ok) {
+      throw new Error(
+        getErrorMessage(result, "Gagal mengambil data subscription.")
+      );
+    }
+
+    return getArrayData(result);
+  }
+
+  async function checkActiveSamePlan() {
+    const subscriptions = await getMySubscriptions();
+
+    const activeSamePlan = subscriptions.find((subscription) => {
+      const subscriptionPlanId = getPlanIdFromSubscription(subscription);
+
+      return (
+        Number(subscriptionPlanId) === Number(planId) &&
+        isSubscriptionStillActive(subscription)
+      );
+    });
+
+    return activeSamePlan || null;
+  }
+
   async function openModal() {
+    setNotice("");
     setOpen(true);
 
     if (initialProfile) {
@@ -145,32 +396,45 @@ export default function SubscribePlan({
 
   async function handleSubscribe(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setNotice("");
 
     if (!profile) {
-      alert("Data profile belum terbaca. Coba tutup modal lalu buka lagi.");
+      setNotice("Data profile belum terbaca. Coba tutup modal lalu buka lagi.");
       return;
     }
 
     if (![7, 14, 30].includes(Number(duration))) {
-      alert("Durasi plan harus 7, 14, atau 30 hari.");
+      setNotice("Durasi plan harus 7, 14, atau 30 hari.");
       return;
     }
 
     try {
       setLoading(true);
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
-
       if (!baseUrl) {
-        alert("NEXT_PUBLIC_BASE_API_URL belum diisi");
+        setNotice("NEXT_PUBLIC_BASE_API_URL belum diisi.");
         return;
       }
 
-      const token = getCookie("accesstoken");
+      const token = getToken();
 
       if (!token) {
         alert("Token tidak ditemukan. Silakan login ulang.");
         window.location.href = "/sign-in";
+        return;
+      }
+
+      const activeSamePlan = await checkActiveSamePlan();
+
+      if (activeSamePlan) {
+        const endDate = getEndDateFromSubscription(activeSamePlan);
+
+        setNotice(
+          `Kamu sudah subscribe plan ini dan masih aktif sampai ${formatDate(
+            endDate
+          )}. Kamu baru bisa subscribe plan yang sama setelah subscription berakhir.`
+        );
+
         return;
       }
 
@@ -180,29 +444,30 @@ export default function SubscribePlan({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+
+        // penting:
+        // backend kamu minta numeric string, jadi durationDays dikirim String
         body: JSON.stringify({
-          cateringPlanId: Number(planId),
-          durationDays: Number(duration),
+          cateringPlanId: String(planId),
+          durationDays: String(duration),
         }),
       });
 
-      const result = await response.json();
+      const result = await getJsonSafe(response);
 
       if (!response.ok) {
-        alert(
-          Array.isArray(result.message)
-            ? result.message.join(", ")
-            : result.message || "Gagal melakukan subscription"
-        );
+        setNotice(getErrorMessage(result, "Gagal melakukan subscription."));
         return;
       }
 
-      alert(result.message || "Subscription berhasil");
+      alert(result?.message || "Subscription berhasil.");
       setOpen(false);
       window.location.href = "/customer/subscriptions";
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Terjadi kesalahan saat subscription");
+      setNotice(
+        error?.message || "Terjadi kesalahan saat melakukan subscription."
+      );
     } finally {
       setLoading(false);
     }
@@ -227,7 +492,7 @@ export default function SubscribePlan({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-lg"
+          className="max-h-[92vh] w-[calc(100vw-24px)] overflow-y-auto p-0 sm:max-w-lg"
           style={{
             borderRadius: 24,
             border: "0.5px solid #d3e2a0",
@@ -238,7 +503,7 @@ export default function SubscribePlan({
           <form onSubmit={handleSubscribe}>
             {/* HEADER */}
             <div
-              className="relative overflow-hidden px-7 pb-5 pt-7"
+              className="relative overflow-hidden px-5 pb-5 pt-6 sm:px-7 sm:pt-7"
               style={{ borderBottom: "0.5px solid #e8f0c8" }}
             >
               <div
@@ -247,7 +512,7 @@ export default function SubscribePlan({
               />
 
               <div className="relative z-10">
-                <div className="mb-2 flex items-center gap-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-xl text-base"
                     style={{
@@ -267,7 +532,7 @@ export default function SubscribePlan({
                 </div>
 
                 <DialogTitle
-                  className="text-xl font-bold"
+                  className="break-words text-lg font-bold sm:text-xl"
                   style={{
                     fontFamily: "'Playfair Display', serif",
                     color: "#1e2a04",
@@ -280,14 +545,21 @@ export default function SubscribePlan({
                   className="mt-1 text-xs leading-5"
                   style={{ color: "#8a9a62" }}
                 >
-                  Konfirmasi subscription. Tanggal selesai dan total harga akan
-                  dihitung otomatis.
+                  Customer hanya bisa subscribe plan yang sama lagi setelah
+                  subscription sebelumnya berakhir.
                 </DialogDescription>
               </div>
             </div>
 
             {/* CONTENT */}
-            <div className="space-y-5 px-7 py-6">
+            <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+              {notice ? (
+                <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="leading-5">{notice}</p>
+                </div>
+              ) : null}
+
               {/* CUSTOMER DATA */}
               <div
                 className="rounded-2xl p-4"
@@ -296,17 +568,17 @@ export default function SubscribePlan({
                   border: "1px solid #d3e2a0",
                 }}
               >
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e8f0c8] text-[#4e6b12]">
+                <div className="mb-3 flex items-start gap-2">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e8f0c8] text-[#4e6b12]">
                     <UserRound size={18} />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
                       Data Customer
                     </p>
 
-                    <p className="text-xs text-[#6B705C]">
+                    <p className="text-xs leading-5 text-[#6B705C]">
                       Data otomatis dari profile akun kamu.
                     </p>
                   </div>
@@ -314,34 +586,34 @@ export default function SubscribePlan({
 
                 {loadingProfile ? (
                   <div className="space-y-2">
-                    <div className="h-4 w-40 animate-pulse rounded-full bg-[#e8f0c8]" />
-                    <div className="h-3 w-56 animate-pulse rounded-full bg-[#e8f0c8]" />
-                    <div className="h-3 w-48 animate-pulse rounded-full bg-[#e8f0c8]" />
+                    <div className="h-4 w-40 max-w-full animate-pulse rounded-full bg-[#e8f0c8]" />
+                    <div className="h-3 w-56 max-w-full animate-pulse rounded-full bg-[#e8f0c8]" />
+                    <div className="h-3 w-48 max-w-full animate-pulse rounded-full bg-[#e8f0c8]" />
                   </div>
                 ) : (
                   <>
-                    <p className="font-bold text-[#1e2a04]">
+                    <p className="break-words font-bold text-[#1e2a04]">
                       {profile?.name || "Nama belum terbaca"}
                     </p>
 
-                    <p className="mt-0.5 text-sm text-[#6B705C]">
+                    <p className="mt-0.5 break-words text-sm text-[#6B705C]">
                       {profile?.email || "Email belum terbaca"}
                     </p>
 
                     <div className="mt-4 border-t border-[#DDE5C2] pt-4">
                       <div className="mb-2 flex items-center gap-2">
-                        <MapPin size={15} className="text-[#6B8E23]" />
+                        <MapPin size={15} className="shrink-0 text-[#6B8E23]" />
 
                         <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
                           Alamat Pengiriman
                         </p>
                       </div>
 
-                      <p className="text-sm font-bold text-[#1e2a04]">
+                      <p className="break-words text-sm font-bold text-[#1e2a04]">
                         {locationText}
                       </p>
 
-                      <p className="mt-1 text-xs leading-5 text-[#6B705C]">
+                      <p className="mt-1 break-words text-xs leading-5 text-[#6B705C]">
                         {profile?.addressDetail || "Detail alamat belum diisi"}
                       </p>
                     </div>
@@ -401,13 +673,13 @@ export default function SubscribePlan({
 
             {/* FOOTER */}
             <div
-              className="flex items-center justify-end gap-3 px-7 py-5"
+              className="flex flex-col-reverse gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-7"
               style={{ borderTop: "0.5px solid #e8f0c8" }}
             >
               <DialogClose asChild>
                 <button
                   type="button"
-                  className="rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:bg-[#f0f5e0]"
+                  className="w-full rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:bg-[#f0f5e0] sm:w-auto"
                   style={{
                     border: "1px solid #d3e2a0",
                     color: "#6a7a4a",
@@ -421,7 +693,7 @@ export default function SubscribePlan({
               <button
                 type="submit"
                 disabled={loading || loadingProfile}
-                className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 sm:w-auto"
                 style={{
                   background:
                     loading || loadingProfile

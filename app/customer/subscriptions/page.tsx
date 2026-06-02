@@ -175,14 +175,14 @@ function getEndDate(subscription: Subscription) {
 
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-const LIMIT = 5;
+  const LIMIT = 5;
 
-const [meta, setMeta] = useState<Meta>({
-  total: 0,
-  page: 1,
-  limit: LIMIT,
-  totalPages: 1,
-});
+  const [meta, setMeta] = useState<Meta>({
+    total: 0,
+    page: 1,
+    limit: LIMIT,
+    totalPages: 1,
+  });
 
   const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState<number>(1);
@@ -209,7 +209,7 @@ const [meta, setMeta] = useState<Meta>({
 
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
-params.set("limit", String(LIMIT));
+      params.set("limit", String(LIMIT));
 
       const response = await fetch(`${baseUrl}/subscriptions?${params}`, {
         method: "GET",
@@ -233,15 +233,15 @@ params.set("limit", String(LIMIT));
 
       setSubscriptions(subscriptionData);
 
-setMeta(
-  result?.meta ||
-    result?.data?.meta || {
-      total: subscriptionData.length,
-      page: currentPage,
-      limit: LIMIT,
-      totalPages: 1,
-    }
-);
+      setMeta(
+        result?.meta ||
+        result?.data?.meta || {
+          total: subscriptionData.length,
+          page: currentPage,
+          limit: LIMIT,
+          totalPages: 1,
+        }
+      );
     } catch (error) {
       console.error("GET SUBSCRIPTIONS ERROR:", error);
       alert("Terjadi kesalahan saat mengambil subscriptions");
@@ -551,37 +551,26 @@ setMeta(
                   </div>
                 ))}
               </div>
-
               {/* DESKTOP TABLE */}
               <div className="hidden w-full xl:block">
                 <table className="w-full table-fixed">
                   <colgroup>
-                    <col className="w-[7%]" />
-                    <col className="w-[26%]" />
-                    <col className="w-[27%]" />
-                    <col className="w-[22%]" />
-                    <col className="w-[18%]" />
+                    <col className="w-[34%]" />
+                    <col className="w-[28%]" />
+                    <col className="w-[38%]" />
                   </colgroup>
 
                   <thead className="bg-[#E8EED0]">
                     <tr>
-                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
-                        ID
-                      </th>
-
-                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
-                        Customer
-                      </th>
-
-                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Plan
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Tanggal
                       </th>
 
-                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                      <th className="border-b border-[#DDE5C2] px-4 py-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
                         Address
                       </th>
                     </tr>
@@ -591,63 +580,63 @@ setMeta(
                     {filteredSubscriptions.map((subscription) => (
                       <tr
                         key={subscription.id}
-                        className="transition hover:bg-[#F6F7EF]"
+                        className="h-[120px] transition hover:bg-[#F6F7EF]"
                       >
-                        <td className="border-b border-[#E8EED0] p-4 text-sm font-semibold text-[#6B705C]">
-                          #{subscription.id}
+                        {/* PLAN */}
+                        <td className="border-b border-[#E8EED0] px-4 py-4 align-middle">
+                          <div className="min-w-0">
+                            <p className="line-clamp-2 font-bold leading-5 text-[#283618]">
+                              {getPlanName(subscription)}
+                            </p>
+
+                            <div className="mt-3 flex w-fit flex-col gap-2">
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
+                                <Wallet size={13} />
+                                {formatRupiah(getPlanPrice(subscription))}
+                              </span>
+
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6B705C]">
+                                <Clock size={13} />
+                                {getPlanDuration(subscription)} hari
+                              </span>
+                            </div>
+                          </div>
                         </td>
 
-                        <td className="border-b border-[#E8EED0] p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#E8EED0] text-[#4e6b12]">
-                              <User size={18} />
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="truncate font-bold text-[#283618]">
-                                {getCustomerName(subscription)}
+                        {/* TANGGAL */}
+                        <td className="border-b border-[#E8EED0] px-4 py-4 align-middle">
+                          <div className="space-y-2 text-sm font-semibold text-[#6B705C]">
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-widest text-[#8a9a62]">
+                                Mulai
                               </p>
 
-                              <p className="mt-1 truncate text-xs font-semibold text-[#6B8E23]">
-                                {getCustomerEmail(subscription)}
+                              <p className="mt-0.5 truncate text-[#283618]">
+                                {formatDate(getStartDate(subscription))}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-widest text-[#8a9a62]">
+                                Selesai
+                              </p>
+
+                              <p className="mt-0.5 truncate text-[#283618]">
+                                {getEndDate(subscription)}
                               </p>
                             </div>
                           </div>
                         </td>
 
-                        <td className="border-b border-[#E8EED0] p-4">
-                          <p className="truncate font-bold text-[#283618]">
-                            {getPlanName(subscription)}
-                          </p>
+                        {/* ADDRESS */}
+                        <td className="border-b border-[#E8EED0] px-4 py-4 align-middle">
+                          <div className="flex items-start gap-2">
+                            <MapPin size={14} className="mt-0.5 shrink-0 text-[#6B8E23]" />
 
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
-                              <Wallet size={13} />
-                              {formatRupiah(getPlanPrice(subscription))}
-                            </span>
-
-                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6B705C]">
-                              <Clock size={13} />
-                              {getPlanDuration(subscription)} hari
-                            </span>
+                            <p className="line-clamp-3 text-xs leading-5 text-[#6B705C]">
+                              {getCustomerAddress(subscription)}
+                            </p>
                           </div>
-                        </td>
-
-                        <td className="border-b border-[#E8EED0] p-4">
-                          <div className="flex flex-col gap-1 text-sm font-semibold text-[#6B705C]">
-                            <span>
-                              Mulai: {formatDate(getStartDate(subscription))}
-                            </span>
-
-                            <span>Selesai: {getEndDate(subscription)}</span>
-                          </div>
-                        </td>
-
-                        <td className="border-b border-[#E8EED0] p-4">
-                          <p className="line-clamp-2 text-xs leading-5 text-[#6B705C]">
-                            <MapPin size={11} className="mr-1 inline" />
-                            {getCustomerAddress(subscription)}
-                          </p>
                         </td>
                       </tr>
                     ))}

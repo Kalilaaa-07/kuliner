@@ -12,6 +12,8 @@ import {
   Droplets,
   Sparkles,
   Leaf,
+  X,
+  Eye,
 } from "lucide-react";
 import { getCookie } from "@/lib/client-cookie";
 import SubscribePlan from "./subscribe";
@@ -99,6 +101,7 @@ export default function CustomerPlanDetailPage({
 }) {
   const [plan, setPlan] = useState<CateringPlan | null>(null);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
 
   const [loadingPlan, setLoadingPlan] = useState<boolean>(true);
   const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
@@ -490,9 +493,11 @@ export default function CustomerPlanDetailPage({
           ) : (
             <div className="space-y-4">
               {meals.map((meal) => (
-                <div
+                <button
                   key={meal.id}
-                  className="group flex gap-4 rounded-[28px] p-4 transition hover:-translate-y-0.5"
+                  type="button"
+                  onClick={() => setSelectedMeal(meal)}
+                  className="group flex w-full gap-4 rounded-[28px] p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md"
                   style={{
                     background: "#FFFDF3",
                     border: "1px solid #C9D989",
@@ -523,7 +528,12 @@ export default function CustomerPlanDetailPage({
                       {meal.name}
                     </h3>
 
-                    <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[#4E6B12]">
+                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[#6B8E23]">
+                      <Eye size={12} />
+                      Klik untuk lihat detail
+                    </p>
+
+                    <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-5 text-[#4E6B12]">
                       {meal.ingredients}
                     </p>
 
@@ -577,12 +587,151 @@ export default function CustomerPlanDetailPage({
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {/* MODAL DETAIL MEAL */}
+      {selectedMeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <div
+            className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[28px] p-5 shadow-xl"
+            style={{
+              background: "#FFFDF3",
+              border: "1px solid #C9D989",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedMeal(null)}
+              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#EEF5C4] text-[#4E6B12] transition hover:scale-105"
+            >
+              <X size={18} />
+            </button>
+
+            <div
+              className="mb-4 flex h-52 w-full items-center justify-center overflow-hidden rounded-3xl text-6xl"
+              style={{
+                background:
+                  "linear-gradient(135deg, #DDEBB0 0%, #EEF5C4 100%)",
+                border: "1px solid #C9D989",
+              }}
+            >
+              {selectedMeal.imageUrl ? (
+                <img
+                  src={selectedMeal.imageUrl}
+                  alt={selectedMeal.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                "🍱"
+              )}
+            </div>
+
+            <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#6B8E23]">
+              Meal Detail
+            </p>
+
+            <h2
+              className="pr-10 text-2xl font-bold text-[#243707]"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              {selectedMeal.name}
+            </h2>
+
+            <div className="mt-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#6B8E23]">
+                Ingredients
+              </p>
+
+              <p className="mt-1 text-sm font-medium leading-6 text-[#4E6B12]">
+                {selectedMeal.ingredients || "-"}
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "#FFF1C7",
+                  border: "1px solid #E8C56A",
+                }}
+              >
+                <div className="flex items-center gap-2 text-[#9A5A13]">
+                  <Flame size={18} />
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    Calories
+                  </p>
+                </div>
+
+                <p className="mt-2 text-lg font-bold text-[#9A5A13]">
+                  {selectedMeal.calories || 0} Kal
+                </p>
+              </div>
+
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "#EEF5C4",
+                  border: "1px solid #C9D989",
+                }}
+              >
+                <div className="flex items-center gap-2 text-[#4E6B12]">
+                  <Beef size={18} />
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    Protein
+                  </p>
+                </div>
+
+                <p className="mt-2 text-lg font-bold text-[#4E6B12]">
+                  {selectedMeal.protein || 0}g
+                </p>
+              </div>
+
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "#EEF5C4",
+                  border: "1px solid #C9D989",
+                }}
+              >
+                <div className="flex items-center gap-2 text-[#4E6B12]">
+                  <Wheat size={18} />
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    Carbs
+                  </p>
+                </div>
+
+                <p className="mt-2 text-lg font-bold text-[#4E6B12]">
+                  {selectedMeal.carbs || 0}g
+                </p>
+              </div>
+
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background: "#EEF5C4",
+                  border: "1px solid #C9D989",
+                }}
+              >
+                <div className="flex items-center gap-2 text-[#4E6B12]">
+                  <Droplets size={18} />
+                  <p className="text-xs font-bold uppercase tracking-widest">
+                    Fat
+                  </p>
+                </div>
+
+                <p className="mt-2 text-lg font-bold text-[#4E6B12]">
+                  {selectedMeal.fat || 0}g
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

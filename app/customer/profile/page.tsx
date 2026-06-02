@@ -102,8 +102,7 @@ export default function CustomerProfilePage() {
 
       const profileData = getProfileData(result);
       console.log("CUSTOMER PROFILE RESPONSE:", result);
-console.log("CUSTOMER PROFILE DATA:", profileData);
-
+      console.log("CUSTOMER PROFILE DATA:", profileData);
       setProfile(profileData);
     } catch (error) {
       console.error(error);
@@ -112,7 +111,7 @@ console.log("CUSTOMER PROFILE DATA:", profileData);
       setLoading(false);
     }
   }
-  
+
 
   function handleLogout() {
     removeCookies("accesstoken");
@@ -159,14 +158,14 @@ console.log("CUSTOMER PROFILE DATA:", profileData);
     );
   }
 
-const provinceName = profile?.city?.province?.name || "";
-const cityName = profile?.city?.name || "";
+  const provinceName = profile?.city?.province?.name || "";
+  const cityName = profile?.city?.name || "";
 
-const locationText =
-  profile?.fullAddress ||
-  (provinceName && cityName
-    ? `${provinceName}, ${cityName}`
-    : cityName || (profile?.cityId ? `City ID: ${profile.cityId}` : "-"));
+  const locationText =
+    profile?.fullAddress ||
+    (provinceName && cityName
+      ? `${provinceName}, ${cityName}`
+      : cityName || (profile?.cityId ? `City ID: ${profile.cityId}` : "-"));
 
   const avatarLetter = profile?.name?.charAt(0)?.toUpperCase() || "C";
 
@@ -298,14 +297,14 @@ const locationText =
               label: "Akun",
               value: profile?.role || "USER",
             },
-{
-  icon: "📍",
-  label: "Lokasi",
-  value:
-    profile?.fullAddress ||
-    profile?.city?.name ||
-    (profile?.cityId ? `City ID: ${profile.cityId}` : "—"),
-},
+            {
+              icon: "📍",
+              label: "Lokasi",
+              value:
+                profile?.fullAddress ||
+                profile?.city?.name ||
+                (profile?.cityId ? `City ID: ${profile.cityId}` : "—"),
+            },
             {
               icon: "✨",
               label: "Status",
