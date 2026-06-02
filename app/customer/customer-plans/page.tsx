@@ -3,14 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Home,
-  Package,
-  ClipboardList,
   User,
   Search,
   CalendarDays,
   Wallet,
-  Filter,
   Sparkles,
   SlidersHorizontal,
 } from "lucide-react";
@@ -134,7 +130,7 @@ export default function CustomerPlansPage() {
 
       const token = getToken();
 
-      const response = await fetch(`${baseUrl}/catering-plans?page=1&limit=4`, {
+      const response = await fetch(`${baseUrl}/catering-plans?page=1&limit=100`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -152,10 +148,7 @@ export default function CustomerPlansPage() {
       }
 
       const planData = getArrayData<CateringPlan>(result);
-
       const activePlans = planData.filter((plan) => plan.isActive === true);
-
-      console.log("ALL ACTIVE PLANS:", activePlans);
 
       setPlans(activePlans);
     } catch (error) {
@@ -275,6 +268,7 @@ export default function CustomerPlansPage() {
             className="absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-10"
             style={{ background: "#fff" }}
           />
+
           <div
             className="absolute bottom-0 right-10 h-24 w-24 rounded-full opacity-10"
             style={{ background: "#fff" }}
@@ -337,9 +331,9 @@ export default function CustomerPlansPage() {
               label: "Tampil",
               value: loadingPlans ? "..." : filteredPlans.length || "—",
             },
-          ].map(({ icon, label, value }, i) => (
+          ].map(({ icon, label, value }, index) => (
             <div
-              key={i}
+              key={index}
               className="flex flex-col items-center gap-0.5 px-2 text-center"
             >
               <span className="text-lg">{icon}</span>
@@ -396,7 +390,7 @@ export default function CustomerPlansPage() {
             />
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -413,6 +407,19 @@ export default function CustomerPlansPage() {
                 </option>
               ))}
             </select>
+
+            <button
+              type="button"
+              onClick={handleResetFilter}
+              className="rounded-2xl px-4 py-3 text-sm font-bold transition hover:-translate-y-0.5"
+              style={{
+                background: "#e8f0c8",
+                color: "#4e6b12",
+                border: "0.5px solid #c2da85",
+              }}
+            >
+              Reset
+            </button>
           </div>
 
           <p className="mt-3 text-xs font-semibold text-[#8a9a62]">
@@ -453,9 +460,9 @@ export default function CustomerPlansPage() {
 
         {loadingPlans ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3].map((item) => (
               <div
-                key={i}
+                key={item}
                 className="flex gap-4 rounded-3xl p-4"
                 style={{
                   background: "#ffffffcc",
@@ -472,14 +479,17 @@ export default function CustomerPlansPage() {
                     className="h-4 w-3/4 animate-pulse rounded-full"
                     style={{ background: "#e8f0c8" }}
                   />
+
                   <div
                     className="h-3 w-1/3 animate-pulse rounded-full"
                     style={{ background: "#f0f5e0" }}
                   />
+
                   <div
                     className="h-3 w-full animate-pulse rounded-full"
                     style={{ background: "#f0f5e0" }}
                   />
+
                   <div
                     className="h-3 w-4/5 animate-pulse rounded-full"
                     style={{ background: "#f0f5e0" }}
@@ -514,7 +524,7 @@ export default function CustomerPlansPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredPlans.map((plan, index) => {
+            {filteredPlans.map((plan) => {
               const categoryName =
                 plan.category?.name ||
                 categories.find((category) => category.id === plan.categoryId)
@@ -547,15 +557,6 @@ export default function CustomerPlansPage() {
                       />
                     ) : (
                       "🍱"
-                    )}
-
-                    {index === 0 && (
-                      <div
-                        className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                        style={{ background: "#6b8e23" }}
-                      >
-                        #1
-                      </div>
                     )}
                   </div>
 
