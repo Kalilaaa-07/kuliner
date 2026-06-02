@@ -39,25 +39,6 @@ type CustomerProfile = {
   city?: City;
 };
 
-type SubscriptionItem = {
-  id?: number;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-  durationDays?: number | string;
-  cateringPlanId?: number | string;
-  planId?: number | string;
-  cateringPlan?: {
-    id?: number | string;
-    name?: string;
-  };
-  plan?: {
-    id?: number | string;
-    name?: string;
-  };
-  [key: string]: any;
-};
-
 type SubscribePlanProps = {
   planId: number;
   planName: string;
@@ -94,20 +75,6 @@ function getProfileData(result: any): CustomerProfile {
   );
 }
 
-function getArrayData(result: any): SubscriptionItem[] {
-  const data =
-    result?.data?.subscriptions ||
-    result?.data?.data ||
-    result?.data?.items ||
-    result?.data ||
-    result?.subscriptions ||
-    result?.items ||
-    result;
-
-  if (Array.isArray(data)) return data;
-  return [];
-}
-
 function getErrorMessage(result: any, fallback: string) {
   if (Array.isArray(result?.message)) {
     return result.message.join(", ");
@@ -124,96 +91,21 @@ function getErrorMessage(result: any, fallback: string) {
   return fallback;
 }
 
-function normalizeDateOnly(date: Date) {
-  const newDate = new Date(date);
-  newDate.setHours(0, 0, 0, 0);
-  return newDate;
-}
+function isAlreadySubscribedMessage(message: string) {
+  const value = message.toLowerCase();
 
-function formatDate(date?: string | Date | null) {
-  if (!date) return "-";
-
-  const dateValue = new Date(date);
-
-  if (Number.isNaN(dateValue.getTime())) {
-    return "-";
-  }
-
-  return dateValue.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function getPlanIdFromSubscription(subscription: SubscriptionItem) {
   return (
-    subscription?.cateringPlanId ||
-    subscription?.cateringPlan?.id ||
-    subscription?.planId ||
-    subscription?.plan?.id
+    value.includes("already") ||
+    value.includes("exist") ||
+    value.includes("exists") ||
+    value.includes("duplicate") ||
+    value.includes("sudah") ||
+    value.includes("pernah") ||
+    value.includes("aktif") ||
+    value.includes("active") ||
+    value.includes("subscribe") ||
+    value.includes("subscription")
   );
-}
-
-function getEndDateFromSubscription(subscription: SubscriptionItem) {
-  if (subscription?.endDate) {
-    const endDate = new Date(subscription.endDate);
-
-    if (!Number.isNaN(endDate.getTime())) {
-      return endDate;
-    }
-  }
-
-  if (subscription?.startDate && subscription?.durationDays) {
-    const startDate = new Date(subscription.startDate);
-
-    if (Number.isNaN(startDate.getTime())) {
-      return null;
-    }
-
-    const calculatedEndDate = new Date(startDate);
-    calculatedEndDate.setDate(
-      calculatedEndDate.getDate() + Number(subscription.durationDays)
-    );
-
-    return calculatedEndDate;
-  }
-
-  return null;
-}
-
-function isInactiveStatus(status?: string) {
-  const value = String(status || "").toLowerCase();
-
-  return [
-    "cancelled",
-    "canceled",
-    "cancel",
-    "completed",
-    "complete",
-    "done",
-    "finished",
-    "expired",
-    "rejected",
-    "failed",
-  ].includes(value);
-}
-
-function isSubscriptionStillActive(subscription: SubscriptionItem) {
-  if (isInactiveStatus(subscription?.status)) {
-    return false;
-  }
-
-  const endDate = getEndDateFromSubscription(subscription);
-
-  if (!endDate || Number.isNaN(endDate.getTime())) {
-    return false;
-  }
-
-  const today = normalizeDateOnly(new Date());
-  const subscriptionEndDate = normalizeDateOnly(endDate);
-
-  return subscriptionEndDate >= today;
 }
 
 export default function SubscribePlan({
@@ -244,27 +136,6 @@ export default function SubscribePlan({
       ? `City ID: ${profile.cityId}`
       : "-");
 
-  async function fetchWithFallback(urls: string[], options: RequestInit) {
-    for (const url of urls) {
-      try {
-        const response = await fetch(url, options);
-        const result = await getJsonSafe(response);
-
-        if (response.ok) {
-          return { response, result };
-        }
-
-        if (response.status !== 404) {
-          return { response, result };
-        }
-      } catch (error) {
-        console.error("Fetch gagal:", url, error);
-      }
-    }
-
-    return null;
-  }
-
   async function getProfile() {
     try {
       setLoadingProfile(true);
@@ -283,23 +154,27 @@ export default function SubscribePlan({
         return;
       }
 
-      const request = await fetchWithFallback(
-        [`${baseUrl}/auth/me`, `${baseUrl}/users/me`],
-        {
+      let response = await fetch(`${baseUrl}/auth/me`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      let result = await getJsonSafe(response);
+
+      if (!response.ok && response.status === 404) {
+        response = await fetch(`${baseUrl}/users/me`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
           cache: "no-store",
-        }
-      );
+        });
 
-      if (!request) {
-        setNotice("Gagal mengambil profile. Endpoint profile tidak ditemukan.");
-        return;
+        result = await getJsonSafe(response);
       }
-
-      const { response, result } = request;
 
       if (!response.ok) {
         setNotice(getErrorMessage(result, "Gagal mengambil data profile."));
@@ -326,62 +201,6 @@ export default function SubscribePlan({
     }
   }
 
-  async function getMySubscriptions() {
-    if (!baseUrl) {
-      throw new Error("NEXT_PUBLIC_BASE_API_URL belum diisi.");
-    }
-
-    const token = getToken();
-
-    if (!token) {
-      throw new Error("Token tidak ditemukan. Silakan login ulang.");
-    }
-
-    const request = await fetchWithFallback(
-      [
-        `${baseUrl}/subscriptions/my-subscriptions`,
-        `${baseUrl}/subscriptions/my`,
-        `${baseUrl}/subscriptions`,
-      ],
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      }
-    );
-
-    if (!request) {
-      throw new Error("Endpoint subscription tidak ditemukan.");
-    }
-
-    const { response, result } = request;
-
-    if (!response.ok) {
-      throw new Error(
-        getErrorMessage(result, "Gagal mengambil data subscription.")
-      );
-    }
-
-    return getArrayData(result);
-  }
-
-  async function checkActiveSamePlan() {
-    const subscriptions = await getMySubscriptions();
-
-    const activeSamePlan = subscriptions.find((subscription) => {
-      const subscriptionPlanId = getPlanIdFromSubscription(subscription);
-
-      return (
-        Number(subscriptionPlanId) === Number(planId) &&
-        isSubscriptionStillActive(subscription)
-      );
-    });
-
-    return activeSamePlan || null;
-  }
-
   async function openModal() {
     setNotice("");
     setOpen(true);
@@ -403,11 +222,6 @@ export default function SubscribePlan({
       return;
     }
 
-    if (![7, 14, 30].includes(Number(duration))) {
-      setNotice("Durasi plan harus 7, 14, atau 30 hari.");
-      return;
-    }
-
     try {
       setLoading(true);
 
@@ -424,20 +238,6 @@ export default function SubscribePlan({
         return;
       }
 
-      const activeSamePlan = await checkActiveSamePlan();
-
-      if (activeSamePlan) {
-        const endDate = getEndDateFromSubscription(activeSamePlan);
-
-        setNotice(
-          `Kamu sudah subscribe plan ini dan masih aktif sampai ${formatDate(
-            endDate
-          )}. Kamu baru bisa subscribe plan yang sama setelah subscription berakhir.`
-        );
-
-        return;
-      }
-
       const response = await fetch(`${baseUrl}/subscriptions`, {
         method: "POST",
         headers: {
@@ -445,18 +245,29 @@ export default function SubscribePlan({
           Authorization: `Bearer ${token}`,
         },
 
-        // penting:
-        // backend kamu minta numeric string, jadi durationDays dikirim String
+        // SESUAI SWAGGER:
+        // POST /subscriptions cuma butuh cateringPlanId
         body: JSON.stringify({
-          cateringPlanId: String(planId),
-          durationDays: String(duration),
+          cateringPlanId: Number(planId),
         }),
       });
 
       const result = await getJsonSafe(response);
 
       if (!response.ok) {
-        setNotice(getErrorMessage(result, "Gagal melakukan subscription."));
+        const message = getErrorMessage(
+          result,
+          "Gagal melakukan subscription."
+        );
+
+        if (isAlreadySubscribedMessage(message)) {
+          setNotice(
+            "Kamu sudah pernah subscribe plan ini. Satu customer hanya bisa subscribe satu plan yang sama sekali."
+          );
+          return;
+        }
+
+        setNotice(message);
         return;
       }
 
@@ -501,7 +312,6 @@ export default function SubscribePlan({
           }}
         >
           <form onSubmit={handleSubscribe}>
-            {/* HEADER */}
             <div
               className="relative overflow-hidden px-5 pb-5 pt-6 sm:px-7 sm:pt-7"
               style={{ borderBottom: "0.5px solid #e8f0c8" }}
@@ -545,13 +355,11 @@ export default function SubscribePlan({
                   className="mt-1 text-xs leading-5"
                   style={{ color: "#8a9a62" }}
                 >
-                  Customer hanya bisa subscribe plan yang sama lagi setelah
-                  subscription sebelumnya berakhir.
+                  Satu customer hanya bisa subscribe satu plan yang sama sekali.
                 </DialogDescription>
               </div>
             </div>
 
-            {/* CONTENT */}
             <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
               {notice ? (
                 <div className="flex gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -560,7 +368,6 @@ export default function SubscribePlan({
                 </div>
               ) : null}
 
-              {/* CUSTOMER DATA */}
               <div
                 className="rounded-2xl p-4"
                 style={{
@@ -621,7 +428,6 @@ export default function SubscribePlan({
                 )}
               </div>
 
-              {/* PLAN SUMMARY */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div
                   className="rounded-2xl p-4"
@@ -671,7 +477,6 @@ export default function SubscribePlan({
               </div>
             </div>
 
-            {/* FOOTER */}
             <div
               className="flex flex-col-reverse gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-7"
               style={{ borderTop: "0.5px solid #e8f0c8" }}
