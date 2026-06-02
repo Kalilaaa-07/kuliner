@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  CalendarDays,
-  Search,
   User,
   Wallet,
   MapPin,
@@ -423,59 +421,6 @@ setMeta(
               />
             </div>
           ))}
-        </div>
-
-        {/* FILTER */}
-        <div
-          className="rounded-[28px] bg-white p-5 shadow-sm sm:p-6"
-          style={{ border: "0.5px solid #d3e2a0" }}
-        >
-          <div className="mb-5 flex items-center gap-3">
-            <div
-              className="h-8 w-1 rounded-full"
-              style={{ background: "#6B8E23" }}
-            />
-
-            <div>
-              <h2
-                className="text-xl font-bold text-[#1e2a04]"
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
-                Search Subscriptions
-              </h2>
-
-              <p className="text-xs font-medium text-[#8a9a62]">
-                Cari berdasarkan customer, email, nama plan, tanggal, atau ID
-              </p>
-            </div>
-          </div>
-
-          <form
-            onSubmit={handleSearch}
-            className="grid gap-3 xl:grid-cols-[1fr_auto]"
-          >
-            <div className="relative w-full">
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B8E23]"
-              />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari subscriptions..."
-                className="w-full rounded-2xl border border-[#DDE5C2] bg-[#F9FAF4] py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#6B8E23] focus:ring-2 focus:ring-[#DDE5C2]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="rounded-2xl bg-[#283618] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#1f2b13]"
-            >
-              Search
-            </button>
-          </form>
         </div>
 
         {/* DATA */}

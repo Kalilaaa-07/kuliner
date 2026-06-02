@@ -11,7 +11,7 @@ import {
   Wheat,
   Droplets,
   Sparkles,
-  MapPin,
+  Leaf,
 } from "lucide-react";
 import { getCookie } from "@/lib/client-cookie";
 import SubscribePlan from "./subscribe";
@@ -88,6 +88,10 @@ function getProfileData(result: any): CustomerProfile {
   );
 }
 
+function getToken() {
+  return getCookie("accessToken") || getCookie("accesstoken") || "";
+}
+
 export default function CustomerPlanDetailPage({
   params,
 }: {
@@ -111,7 +115,7 @@ export default function CustomerPlanDetailPage({
         return;
       }
 
-      const token = getCookie("accesstoken");
+      const token = getToken();
 
       const response = await fetch(`${baseUrl}/catering-plans/${id}`, {
         method: "GET",
@@ -149,7 +153,7 @@ export default function CustomerPlanDetailPage({
         return;
       }
 
-      const token = getCookie("accesstoken");
+      const token = getToken();
 
       if (!token) {
         window.location.href = "/sign-in";
@@ -202,19 +206,22 @@ export default function CustomerPlanDetailPage({
         className="flex min-h-screen items-center justify-center px-5 text-center"
         style={{
           background:
-            "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 55%, #f4f8e8 100%)",
+            "linear-gradient(160deg, #F7F5D9 0%, #EEF5C4 45%, #DDEBB0 100%)",
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
         <div
-          className="rounded-3xl px-8 py-7"
+          className="rounded-[28px] px-8 py-7 shadow-sm"
           style={{
-            background: "#ffffffcc",
-            border: "0.5px solid #d3e2a0",
+            background: "#FFFDF3",
+            border: "1px solid #C9D989",
           }}
         >
-          <div className="mx-auto mb-3 h-12 w-12 animate-pulse rounded-2xl bg-[#e8f0c8]" />
-          <p className="text-sm font-semibold text-[#6B705C]">
+          <div className="mx-auto mb-3 flex h-12 w-12 animate-pulse items-center justify-center rounded-2xl bg-[#DDEBB0]">
+            <Leaf size={22} className="text-[#4E6B12]" />
+          </div>
+
+          <p className="text-sm font-bold text-[#4E6B12]">
             Memuat detail plan...
           </p>
         </div>
@@ -228,21 +235,21 @@ export default function CustomerPlanDetailPage({
         className="flex min-h-screen items-center justify-center px-5 text-center"
         style={{
           background:
-            "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 55%, #f4f8e8 100%)",
+            "linear-gradient(160deg, #F7F5D9 0%, #EEF5C4 45%, #DDEBB0 100%)",
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
         <div
-          className="rounded-3xl p-8"
+          className="rounded-[28px] p-8 shadow-sm"
           style={{
-            background: "#ffffffcc",
-            border: "0.5px solid #d3e2a0",
+            background: "#FFFDF3",
+            border: "1px solid #C9D989",
           }}
         >
           <span className="mb-3 block text-5xl">🍽️</span>
 
           <p
-            className="font-bold text-[#1e2a04]"
+            className="font-bold text-[#243707]"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             Plan tidak ditemukan
@@ -251,7 +258,7 @@ export default function CustomerPlanDetailPage({
           <Link
             href="/customer/customer-plans"
             className="mt-4 inline-flex rounded-full px-5 py-2 text-sm font-bold text-white"
-            style={{ background: "#6b8e23" }}
+            style={{ background: "#6B8E23" }}
           >
             Kembali ke plans
           </Link>
@@ -262,25 +269,19 @@ export default function CustomerPlanDetailPage({
 
   const meals = plan.meals || [];
 
-  const locationText =
-    profile?.fullAddress ||
-    (profile?.city?.name
-      ? `${profile?.city?.province?.name || ""}, ${profile.city.name}`
-      : "");
-
   return (
     <main
       className="min-h-screen pb-10"
       style={{
         background:
-          "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 55%, #f4f8e8 100%)",
+          "linear-gradient(160deg, #F7F5D9 0%, #EEF5C4 42%, #DDEBB0 100%)",
         fontFamily: "'DM Sans', sans-serif",
-        color: "#1e2a04",
+        color: "#243707",
       }}
     >
       {/* HERO IMAGE */}
       <section className="relative">
-        <div className="relative h-[340px] w-full overflow-hidden bg-[#E8EED0] sm:h-[420px]">
+        <div className="relative h-[340px] w-full overflow-hidden bg-[#DDEBB0] sm:h-[430px]">
           {plan.imageUrl ? (
             <img
               src={plan.imageUrl}
@@ -293,12 +294,12 @@ export default function CustomerPlanDetailPage({
             </div>
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-[#f0f5e0]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#243707]/35 via-[#4E6B12]/10 to-[#F7F5D9]" />
         </div>
 
         <Link
           href="/customer/customer-plans"
-          className="absolute left-5 top-6 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/90 text-[#6B8E23] shadow-lg backdrop-blur transition hover:scale-105"
+          className="absolute left-5 top-6 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFFDF3] text-[#4E6B12] shadow-lg transition hover:scale-105"
         >
           <ArrowLeft size={22} />
         </Link>
@@ -306,12 +307,11 @@ export default function CustomerPlanDetailPage({
         <div className="absolute bottom-8 left-5 right-5">
           <div className="mx-auto max-w-3xl">
             <span
-              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold"
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold shadow-sm"
               style={{
-                background: "#ffffff30",
-                color: "#ffffff",
-                border: "0.5px solid #ffffff50",
-                backdropFilter: "blur(8px)",
+                background: "#FFFDF3",
+                color: "#4E6B12",
+                border: "1px solid #C9D989",
               }}
             >
               <Sparkles size={12} />
@@ -332,53 +332,47 @@ export default function CustomerPlanDetailPage({
       <section className="-mt-6 px-5">
         <div className="mx-auto max-w-3xl">
           <div
-            className="relative overflow-hidden rounded-3xl p-5 shadow-sm sm:p-6"
+            className="relative overflow-hidden rounded-[30px] p-5 shadow-sm sm:p-6"
             style={{
-              background: "#ffffffee",
-              border: "0.5px solid #d3e2a0",
-              boxShadow: "0 2px 14px #1e2a0410",
+              background: "#FFFDF3",
+              border: "1px solid #C9D989",
+              boxShadow: "0 18px 35px #4E6B1218",
             }}
           >
             <div
-              className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-20"
-              style={{ background: "#6b8e23" }}
+              className="absolute -right-12 -top-12 h-36 w-36 rounded-full opacity-30"
+              style={{ background: "#DDEBB0" }}
+            />
+
+            <div
+              className="absolute -bottom-12 -left-12 h-36 w-36 rounded-full opacity-40"
+              style={{ background: "#EEF5C4" }}
             />
 
             <div className="relative z-10">
-              <p className="text-sm leading-7 text-[#6B705C]">
+              <p className="text-sm font-medium leading-7 text-[#4E6B12]">
                 {plan.description}
               </p>
-
-              {locationText && (
-                <div
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-                  style={{
-                    background: "#e8f0c8",
-                    border: "0.5px solid #c2da85",
-                    color: "#4e6b12",
-                  }}
-                >
-                  <MapPin size={12} />
-                  {locationText}
-                </div>
-              )}
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "#F6F7EF",
-                    border: "0.5px solid #E8EED0",
+                    background:
+                      "linear-gradient(135deg, #EEF5C4 0%, #FFFDF3 100%)",
+                    border: "1px solid #C9D989",
                   }}
                 >
-                  <Wallet size={20} className="text-[#6B8E23]" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6B8E23] text-white">
+                    <Wallet size={20} />
+                  </div>
 
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-[#8a9a62]">
+                  <p className="mt-3 text-xs font-bold uppercase tracking-widest text-[#6B8E23]">
                     Harga
                   </p>
 
                   <p
-                    className="mt-1 text-lg font-bold text-[#1e2a04]"
+                    className="mt-1 text-lg font-bold text-[#243707]"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                   >
                     {formatRupiah(plan.price)}
@@ -388,18 +382,21 @@ export default function CustomerPlanDetailPage({
                 <div
                   className="rounded-2xl p-4"
                   style={{
-                    background: "#F6F7EF",
-                    border: "0.5px solid #E8EED0",
+                    background:
+                      "linear-gradient(135deg, #EEF5C4 0%, #FFFDF3 100%)",
+                    border: "1px solid #C9D989",
                   }}
                 >
-                  <CalendarDays size={20} className="text-[#6B8E23]" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6B8E23] text-white">
+                    <CalendarDays size={20} />
+                  </div>
 
-                  <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-[#8a9a62]">
+                  <p className="mt-3 text-xs font-bold uppercase tracking-widest text-[#6B8E23]">
                     Durasi
                   </p>
 
                   <p
-                    className="mt-1 text-lg font-bold text-[#1e2a04]"
+                    className="mt-1 text-lg font-bold text-[#243707]"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                   >
                     {plan.duration} hari
@@ -410,11 +407,11 @@ export default function CustomerPlanDetailPage({
               <div className="mt-5">
                 {loadingProfile ? (
                   <div
-                    className="rounded-2xl p-4 text-center text-sm font-semibold"
+                    className="rounded-2xl p-4 text-center text-sm font-bold"
                     style={{
-                      background: "#F6F7EF",
-                      border: "0.5px solid #E8EED0",
-                      color: "#6B705C",
+                      background: "#EEF5C4",
+                      border: "1px solid #C9D989",
+                      color: "#4E6B12",
                     }}
                   >
                     Memuat data customer...
@@ -436,21 +433,21 @@ export default function CustomerPlanDetailPage({
       {/* MEALS */}
       <section className="mt-8 px-5">
         <div className="mx-auto max-w-3xl">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-1.5">
-                <Sparkles size={14} style={{ color: "#6b8e23" }} />
+                <Sparkles size={14} style={{ color: "#6B8E23" }} />
 
                 <p
-                  className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ color: "#6b8e23" }}
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "#6B8E23" }}
                 >
                   Isi Paket
                 </p>
               </div>
 
               <h2
-                className="text-xl font-bold"
+                className="text-xl font-bold text-[#243707]"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 Meals dalam plan ini
@@ -458,11 +455,11 @@ export default function CustomerPlanDetailPage({
             </div>
 
             <span
-              className="rounded-full px-3 py-1 text-xs font-bold"
+              className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
               style={{
-                background: "#e8f0c8",
-                color: "#4e6b12",
-                border: "0.5px solid #c2da85",
+                background: "#FFFDF3",
+                color: "#4E6B12",
+                border: "1px solid #C9D989",
               }}
             >
               {meals.length} meals
@@ -471,22 +468,22 @@ export default function CustomerPlanDetailPage({
 
           {meals.length === 0 ? (
             <div
-              className="flex flex-col items-center rounded-3xl p-8 text-center"
+              className="flex flex-col items-center rounded-[28px] p-8 text-center shadow-sm"
               style={{
-                background: "#ffffffcc",
-                border: "0.5px solid #d3e2a0",
+                background: "#FFFDF3",
+                border: "1px solid #C9D989",
               }}
             >
               <span className="mb-3 text-5xl">🍱</span>
 
               <p
-                className="font-bold text-[#1e2a04]"
+                className="font-bold text-[#243707]"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 Belum ada meals di plan ini
               </p>
 
-              <p className="mt-1.5 text-sm leading-6 text-[#8a9a62]">
+              <p className="mt-1.5 text-sm font-medium leading-6 text-[#6B8E23]">
                 Admin belum menambahkan daftar makanan untuk plan ini.
               </p>
             </div>
@@ -495,18 +492,19 @@ export default function CustomerPlanDetailPage({
               {meals.map((meal) => (
                 <div
                   key={meal.id}
-                  className="group flex gap-4 rounded-3xl p-4 transition hover:-translate-y-0.5"
+                  className="group flex gap-4 rounded-[28px] p-4 transition hover:-translate-y-0.5"
                   style={{
-                    background: "#ffffffee",
-                    border: "0.5px solid #d3e2a0",
-                    boxShadow: "0 2px 12px #1e2a0408",
+                    background: "#FFFDF3",
+                    border: "1px solid #C9D989",
+                    boxShadow: "0 12px 28px #4E6B1212",
                   }}
                 >
                   <div
                     className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-4xl sm:h-28 sm:w-28"
                     style={{
                       background:
-                        "linear-gradient(135deg, #e8f0c8, #d3e2a0)",
+                        "linear-gradient(135deg, #DDEBB0 0%, #EEF5C4 100%)",
+                      border: "1px solid #C9D989",
                     }}
                   >
                     {meal.imageUrl ? (
@@ -521,21 +519,21 @@ export default function CustomerPlanDetailPage({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-1 font-bold text-[#1e2a04]">
+                    <h3 className="line-clamp-1 font-bold text-[#243707]">
                       {meal.name}
                     </h3>
 
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#6B705C]">
+                    <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-[#4E6B12]">
                       {meal.ingredients}
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       <span
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{
-                          background: "#fdf3e7",
-                          color: "#a06020",
-                          border: "0.5px solid #f0c97a",
+                          background: "#FFF1C7",
+                          color: "#9A5A13",
+                          border: "1px solid #E8C56A",
                         }}
                       >
                         <Flame size={12} />
@@ -543,23 +541,23 @@ export default function CustomerPlanDetailPage({
                       </span>
 
                       <span
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{
-                          background: "#f0f5e0",
-                          color: "#4e6b12",
-                          border: "0.5px solid #c2da85",
+                          background: "#EEF5C4",
+                          color: "#4E6B12",
+                          border: "1px solid #C9D989",
                         }}
                       >
                         <Beef size={12} />
-                        {meal.protein || meal.protein || 0}g
+                        {meal.protein || 0}g
                       </span>
 
                       <span
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{
-                          background: "#f0f5e0",
-                          color: "#4e6b12",
-                          border: "0.5px solid #c2da85",
+                          background: "#EEF5C4",
+                          color: "#4E6B12",
+                          border: "1px solid #C9D989",
                         }}
                       >
                         <Wheat size={12} />
@@ -567,11 +565,11 @@ export default function CustomerPlanDetailPage({
                       </span>
 
                       <span
-                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{
-                          background: "#f0f5e0",
-                          color: "#4e6b12",
-                          border: "0.5px solid #c2da85",
+                          background: "#EEF5C4",
+                          color: "#4E6B12",
+                          border: "1px solid #C9D989",
                         }}
                       >
                         <Droplets size={12} />

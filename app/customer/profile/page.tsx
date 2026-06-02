@@ -101,6 +101,9 @@ export default function CustomerProfilePage() {
       }
 
       const profileData = getProfileData(result);
+      console.log("CUSTOMER PROFILE RESPONSE:", result);
+console.log("CUSTOMER PROFILE DATA:", profileData);
+
       setProfile(profileData);
     } catch (error) {
       console.error(error);
@@ -109,6 +112,7 @@ export default function CustomerProfilePage() {
       setLoading(false);
     }
   }
+  
 
   function handleLogout() {
     removeCookies("accesstoken");
@@ -155,10 +159,14 @@ export default function CustomerProfilePage() {
     );
   }
 
-  const locationText =
-    profile?.city?.name && profile?.city?.province?.name
-      ? `${profile.city.province.name}, ${profile.city.name}`
-      : profile?.city?.name || profile?.fullAddress || "-";
+const provinceName = profile?.city?.province?.name || "";
+const cityName = profile?.city?.name || "";
+
+const locationText =
+  profile?.fullAddress ||
+  (provinceName && cityName
+    ? `${provinceName}, ${cityName}`
+    : cityName || (profile?.cityId ? `City ID: ${profile.cityId}` : "-"));
 
   const avatarLetter = profile?.name?.charAt(0)?.toUpperCase() || "C";
 
@@ -290,11 +298,14 @@ export default function CustomerProfilePage() {
               label: "Akun",
               value: profile?.role || "USER",
             },
-            {
-              icon: "📍",
-              label: "Lokasi",
-              value: profile?.city?.name || "—",
-            },
+{
+  icon: "📍",
+  label: "Lokasi",
+  value:
+    profile?.fullAddress ||
+    profile?.city?.name ||
+    (profile?.cityId ? `City ID: ${profile.cityId}` : "—"),
+},
             {
               icon: "✨",
               label: "Status",
