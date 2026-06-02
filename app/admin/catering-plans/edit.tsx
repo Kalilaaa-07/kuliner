@@ -2,7 +2,7 @@
 
 import { getCookie } from "@/lib/client-cookie";
 import { FormEvent, useState } from "react";
-import { Edit, Save, ChevronDown, ImageIcon } from "lucide-react";
+import { Edit, Save, ChevronDown } from "lucide-react";
 import type { Category, CateringPlan } from "./page";
 
 import {
@@ -49,7 +49,6 @@ export default function EditPlan({
   const [description, setDescription] = useState<string>("");
   const [price, setPrice] = useState<string>("");
   const [duration, setDuration] = useState<string>("");
-
   const [categoryId, setCategoryId] = useState<string>("");
   const [isActive, setIsActive] = useState<boolean>(true);
 
@@ -99,12 +98,13 @@ export default function EditPlan({
       setLoading(true);
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
-      const token = getToken();
 
       if (!baseUrl) {
         alert("NEXT_PUBLIC_BASE_API_URL belum diisi");
         return;
       }
+
+      const token = getToken();
 
       if (!token) {
         alert("Token tidak ditemukan. Silakan login ulang.");
@@ -121,8 +121,6 @@ export default function EditPlan({
         categoryId: Number(categoryId),
       };
 
-      console.log("UPDATE PLAN BODY:", body);
-
       const response = await fetch(
         `${baseUrl}/catering-plans/${selectedData.id}`,
         {
@@ -136,9 +134,6 @@ export default function EditPlan({
       );
 
       const result = await readJsonSafe(response);
-
-      console.log("UPDATE PLAN STATUS:", response.status);
-      console.log("UPDATE PLAN RESULT:", result);
 
       if (!response.ok) {
         alert(getErrorMessage(result, "Gagal mengedit catering plan"));
@@ -213,7 +208,6 @@ export default function EditPlan({
           }}
         >
           <form onSubmit={handleSubmit}>
-            {/* Header */}
             <div
               className="relative overflow-hidden px-5 pb-5 pt-6 sm:px-7 sm:pt-7"
               style={{ borderBottom: "0.5px solid #e8f0c8" }}
@@ -262,9 +256,7 @@ export default function EditPlan({
               </div>
             </div>
 
-            {/* Form */}
             <div className="space-y-5 px-5 py-6 sm:px-7">
-              {/* Nama Plan */}
               <div>
                 <label
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
@@ -285,7 +277,6 @@ export default function EditPlan({
                 />
               </div>
 
-              {/* Deskripsi */}
               <div>
                 <label
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
@@ -306,7 +297,6 @@ export default function EditPlan({
                 />
               </div>
 
-              {/* Price & Duration */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label
@@ -373,7 +363,6 @@ export default function EditPlan({
                 </div>
               </div>
 
-              {/* Category */}
               <div>
                 <label
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
@@ -411,7 +400,6 @@ export default function EditPlan({
                 </div>
               </div>
 
-              {/* Status */}
               <div>
                 <label
                   className="mb-2 block text-xs font-semibold uppercase tracking-widest"
@@ -457,7 +445,6 @@ export default function EditPlan({
               </div>
             </div>
 
-            {/* Footer */}
             <div
               className="flex flex-col-reverse gap-2 px-5 py-5 sm:flex-row sm:items-center sm:justify-end sm:px-7"
               style={{ borderTop: "0.5px solid #e8f0c8" }}

@@ -31,14 +31,7 @@ type Meta = {
   totalPages: number;
 };
 
-type PlanResponse = {
-  data: CateringPlan[];
-  meta: Meta;
-};
-
-type CategoryResponse = {
-  data: Category[];
-};
+const LIMIT = 5;
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -67,11 +60,49 @@ function getErrorMessage(result: any, fallback: string) {
   return result?.message || fallback;
 }
 
+async function readJsonSafe(response: Response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { message: text };
+  }
+}
+
+function getMeta(result: any, dataLength: number, currentPage: number): Meta {
+  const metaData = result?.meta || result?.data?.meta || {};
+
+  const total =
+    Number(
+      metaData?.total ||
+        metaData?.totalData ||
+        metaData?.totalItems ||
+        result?.total ||
+        result?.data?.total ||
+        dataLength
+    ) || dataLength;
+
+  const totalPages =
+    Number(
+      metaData?.totalPages ||
+        metaData?.lastPage ||
+        result?.totalPages ||
+        result?.data?.totalPages ||
+        Math.ceil(total / LIMIT)
+    ) || 1;
+
+  return {
+    total,
+    page: Number(metaData?.page || currentPage),
+    limit: Number(metaData?.limit || LIMIT),
+    totalPages: Math.max(totalPages, 1),
+  };
+}
+
 export default function AdminPlansPage() {
   const [plans, setPlans] = useState<CateringPlan[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-
-  const LIMIT = 5;
 
   const [meta, setMeta] = useState<Meta>({
     total: 0,
@@ -111,7 +142,7 @@ export default function AdminPlansPage() {
         cache: "no-store",
       });
 
-      const result: CategoryResponse | any = await response.json();
+      const result = await readJsonSafe(response);
 
       if (!response.ok) {
         alert(getErrorMessage(result, "Gagal mengambil categories"));
@@ -172,7 +203,7 @@ export default function AdminPlansPage() {
         }
       );
 
-      const result: PlanResponse | any = await response.json();
+      const result = await readJsonSafe(response);
 
       if (!response.ok) {
         alert(getErrorMessage(result, "Gagal mengambil catering plans"));
@@ -182,16 +213,7 @@ export default function AdminPlansPage() {
       const planData = getArrayData<CateringPlan>(result);
 
       setPlans(planData);
-
-      setMeta(
-        result?.meta ||
-        result?.data?.meta || {
-          total: planData.length,
-          page: currentPage,
-          limit: LIMIT,
-          totalPages: 1,
-        }
-      );
+      setMeta(getMeta(result, planData.length, currentPage));
     } catch (error) {
       console.error("GET PLANS ERROR:", error);
       alert("Terjadi kesalahan saat mengambil catering plans");
@@ -219,7 +241,6 @@ export default function AdminPlansPage() {
 
   const filteredPlans = plans.filter((plan) => {
     const keyword = search.trim().toLowerCase();
-
     const planCategoryId = plan.categoryId || plan.category?.id;
 
     const matchSearch =
@@ -272,7 +293,6 @@ export default function AdminPlansPage() {
       }}
     >
       <div className="mx-auto w-full max-w-7xl space-y-6">
-        {/* HEADER */}
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <p className="mb-1 text-xs font-bold uppercase tracking-[0.25em] text-[#6B8E23]">
@@ -300,7 +320,6 @@ export default function AdminPlansPage() {
           </div>
         </div>
 
-        {/* WELCOME CARD */}
         <div
           className="relative overflow-hidden rounded-[28px] p-5 shadow-sm sm:p-7"
           style={{
@@ -337,7 +356,6 @@ export default function AdminPlansPage() {
           </div>
         </div>
 
-        {/* STATS */}
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
           {stats.map((item) => (
             <div
@@ -388,7 +406,6 @@ export default function AdminPlansPage() {
           ))}
         </div>
 
-        {/* FILTER */}
         <div
           className="rounded-[28px] bg-white p-5 shadow-sm sm:p-6"
           style={{ border: "0.5px solid #d3e2a0" }}
@@ -408,7 +425,7 @@ export default function AdminPlansPage() {
               </h2>
 
               <p className="text-xs font-medium text-[#8a9a62]">
-                Cari plan berdasarkan nama, deskripsi, atau kategori
+                Cari plan berdasarkan nama, deskripsi, atau kategori.
               </p>
             </div>
           </div>
@@ -455,7 +472,6 @@ export default function AdminPlansPage() {
           </form>
         </div>
 
-        {/* DATA */}
         <div
           className="overflow-hidden rounded-[28px] bg-white shadow-sm"
           style={{ border: "0.5px solid #d3e2a0" }}
@@ -507,7 +523,6 @@ export default function AdminPlansPage() {
             </div>
           ) : (
             <>
-              {/* MOBILE + TABLET CARD */}
               <div className="grid gap-4 p-5 xl:hidden">
                 {filteredPlans.map((plan) => (
                   <div
@@ -527,10 +542,11 @@ export default function AdminPlansPage() {
                       </div>
 
                       <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${plan.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-orange-100 text-orange-700"
-                          }`}
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                          plan.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}
                       >
                         {plan.isActive ? "Active" : "Inactive"}
                       </span>
@@ -543,7 +559,10 @@ export default function AdminPlansPage() {
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#E8EED0] px-3 py-1 text-xs font-bold text-[#4e6b12]">
                         <Tag size={13} />
-                        {plan.category?.name || `Category ID: ${plan.categoryId || plan.category?.id}` || "-"}
+                        {plan.category?.name ||
+                          (plan.categoryId
+                            ? `Category ID: ${plan.categoryId}`
+                            : "-")}
                       </span>
 
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
@@ -573,7 +592,6 @@ export default function AdminPlansPage() {
                 ))}
               </div>
 
-              {/* DESKTOP TABLE */}
               <div className="hidden w-full xl:block">
                 <table className="w-full table-fixed">
                   <colgroup>
@@ -640,7 +658,10 @@ export default function AdminPlansPage() {
                           <div className="flex flex-wrap gap-2">
                             <span className="inline-flex items-center gap-1 rounded-full bg-[#E8EED0] px-3 py-1 text-xs font-bold text-[#4e6b12]">
                               <Tag size={13} />
-                              {plan.category?.name || `Category ID: ${plan.categoryId || plan.category?.id}` || "-"}
+                              {plan.category?.name ||
+                                (plan.categoryId
+                                  ? `Category ID: ${plan.categoryId}`
+                                  : "-")}
                             </span>
 
                             <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
@@ -657,10 +678,11 @@ export default function AdminPlansPage() {
 
                         <td className="border-b border-[#E8EED0] p-4">
                           <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${plan.isActive
-                              ? "bg-green-100 text-green-700"
-                              : "bg-orange-100 text-orange-700"
-                              }`}
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              plan.isActive
+                                ? "bg-green-100 text-green-700"
+                                : "bg-orange-100 text-orange-700"
+                            }`}
                           >
                             {plan.isActive ? "Active" : "Inactive"}
                           </span>

@@ -3,7 +3,6 @@
 import { getCookie } from "@/lib/client-cookie";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import type { CateringPlan } from "./page";
 
 import {
   Dialog,
@@ -13,8 +12,24 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
-type DeletePlanProps = {
-  selectedData: CateringPlan;
+type Subscription = {
+  id: number;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  cateringPlan?: {
+    id?: number;
+    name?: string;
+  };
+  user?: {
+    id?: number;
+    name?: string;
+    email?: string;
+  };
+};
+
+type DeleteSubscriptionProps = {
+  selectedData: Subscription;
   onSuccess: () => void;
 };
 
@@ -37,12 +52,12 @@ async function readJsonSafe(response: Response) {
   }
 }
 
-export default function DeletePlan({
+export default function DeleteSubscription({
   selectedData,
   onSuccess,
-}: DeletePlanProps) {
-  const [open, setOpen] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+}: DeleteSubscriptionProps) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
     try {
@@ -63,30 +78,28 @@ export default function DeletePlan({
         return;
       }
 
-      const response = await fetch(
-        `${baseUrl}/catering-plans/${selectedData.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${baseUrl}/subscriptions/${selectedData.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
 
       const result = await readJsonSafe(response);
 
       if (!response.ok) {
-        alert(getErrorMessage(result, "Gagal menghapus catering plan"));
+        alert(getErrorMessage(result, "Gagal menghapus subscription"));
         return;
       }
 
-      alert(result?.message || "Catering plan berhasil dihapus");
+      alert(result?.message || "Subscription berhasil dihapus");
       setOpen(false);
       onSuccess();
     } catch (error) {
-      console.error("DELETE PLAN ERROR:", error);
-      alert("Terjadi kesalahan saat menghapus catering plan");
+      console.error("DELETE SUBSCRIPTION ERROR:", error);
+      alert("Terjadi kesalahan saat menghapus subscription");
     } finally {
       setLoading(false);
     }
@@ -97,7 +110,7 @@ export default function DeletePlan({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition hover:-translate-y-0.5 active:translate-y-0"
+        className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         style={{
           background: "#fff1f1",
           border: "1px solid #ffc9c9",
@@ -106,7 +119,6 @@ export default function DeletePlan({
         }}
       >
         <Trash2 size={14} strokeWidth={2.5} />
-        Delete
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -131,7 +143,7 @@ export default function DeletePlan({
             <div className="relative z-10">
               <div className="mb-3 flex items-center gap-3">
                 <div
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-base sm:h-10 sm:w-10 sm:text-lg"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
                   style={{
                     background: "#fff1f1",
                     border: "1px solid #ffc9c9",
@@ -148,7 +160,7 @@ export default function DeletePlan({
                     color: "#b42318",
                   }}
                 >
-                  Delete Plan
+                  Delete Subscription
                 </span>
               </div>
 
@@ -159,15 +171,15 @@ export default function DeletePlan({
                   color: "#1e2a04",
                 }}
               >
-                Hapus Catering Plan?
+                Hapus Subscription?
               </DialogTitle>
 
               <DialogDescription
                 className="mt-1 text-sm leading-6"
                 style={{ color: "#6a7a4a" }}
               >
-                Data plan ini akan dihapus dari sistem. Pastikan kamu benar-benar
-                ingin menghapus plan ini.
+                Data subscription ini akan dihapus dari sistem. Pastikan kamu
+                benar-benar ingin menghapus data ini.
               </DialogDescription>
             </div>
           </div>
@@ -181,15 +193,15 @@ export default function DeletePlan({
               }}
             >
               <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
-                Plan yang dipilih
+                Subscription yang dipilih
               </p>
 
               <h3 className="mt-1 text-base font-extrabold text-[#1e2a04]">
-                {selectedData.name}
+                {selectedData.cateringPlan?.name || "Subscription"}
               </h3>
 
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#6a7a4a]">
-                {selectedData.description || "Tidak ada deskripsi"}
+              <p className="mt-1 text-xs leading-5 text-[#6a7a4a]">
+                Customer: {selectedData.user?.name || selectedData.user?.email || "-"}
               </p>
             </div>
           </div>
@@ -202,7 +214,7 @@ export default function DeletePlan({
               <button
                 type="button"
                 disabled={loading}
-                className="rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:bg-[#f0f5e0]"
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:bg-[#f0f5e0] disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   border: "1px solid #d3e2a0",
                   color: "#6a7a4a",
@@ -217,7 +229,7 @@ export default function DeletePlan({
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
               style={{
                 background: loading
                   ? "#fca5a5"
@@ -232,7 +244,7 @@ export default function DeletePlan({
               ) : (
                 <>
                   <Trash2 size={15} strokeWidth={2.5} />
-                  Delete Plan
+                  Delete
                 </>
               )}
             </button>
