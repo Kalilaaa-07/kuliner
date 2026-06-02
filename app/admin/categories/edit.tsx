@@ -190,7 +190,7 @@ export default function EditCategory({
                   className="mt-0.5 text-xs"
                   style={{ color: "#8a9a62" }}
                 >
-                  Ubah nama dan deskripsi category sesuai format.
+                  Ubah Nama dan deskripsi category sesuai format.
                 </DialogDescription>
               </div>
             </div>

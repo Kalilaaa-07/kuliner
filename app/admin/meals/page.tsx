@@ -63,10 +63,12 @@ function getErrorMessage(result: any, fallback: string) {
 
 export default function AdminMealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
+  const LIMIT = 5;
+
   const [meta, setMeta] = useState<Meta>({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: LIMIT,
     totalPages: 1,
   });
 
@@ -95,7 +97,7 @@ export default function AdminMealsPage() {
 
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
-      params.set("limit", "10");
+      params.set("limit", String(LIMIT));
 
       if (keyword.trim()) {
         params.set("search", keyword.trim());
@@ -122,10 +124,11 @@ export default function AdminMealsPage() {
       setMeals(mealData);
 
       setMeta(
-        result?.meta || result?.data?.meta || {
+        result?.meta ||
+        result?.data?.meta || {
           total: mealData.length,
           page: currentPage,
-          limit: 10,
+          limit: LIMIT,
           totalPages: 1,
         }
       );
@@ -140,22 +143,7 @@ export default function AdminMealsPage() {
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPage(1);
-  }
-
-  function handlePrevPage() {
-    if (page <= 1) return;
-
-    const newPage = page - 1;
-    setPage(newPage);
-    getMeals(newPage, search);
-  }
-
-  function handleNextPage() {
-    if (page >= meta.totalPages) return;
-
-    const newPage = page + 1;
-    setPage(newPage);
-    getMeals(newPage, search);
+    getMeals(1, search);
   }
 
   useEffect(() => {
@@ -459,8 +447,8 @@ export default function AdminMealsPage() {
                           {meal.cateringPlan?.name
                             ? meal.cateringPlan.name
                             : meal.cateringPlanId
-                            ? `Plan ID: ${meal.cateringPlanId}`
-                            : "No plan"}
+                              ? `Plan ID: ${meal.cateringPlanId}`
+                              : "No plan"}
                         </p>
                       </div>
                     </div>
@@ -588,8 +576,8 @@ export default function AdminMealsPage() {
                                 {meal.cateringPlan?.name
                                   ? meal.cateringPlan.name
                                   : meal.cateringPlanId
-                                  ? `Plan ID: ${meal.cateringPlanId}`
-                                  : "No plan"}
+                                    ? `Plan ID: ${meal.cateringPlanId}`
+                                    : "No plan"}
                               </p>
                             </div>
                           </div>
@@ -645,33 +633,6 @@ export default function AdminMealsPage() {
               </div>
             </>
           )}
-
-          {/* PAGINATION */}
-          <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-[#6B705C]">
-              Page {meta.page || page} of {meta.totalPages || 1}
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handlePrevPage}
-                disabled={page <= 1}
-                className="rounded-xl border border-[#DDE5C2] bg-white px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F6F7EF] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Prev
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextPage}
-                disabled={page >= meta.totalPages}
-                className="rounded-xl bg-[#6B8E23] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5B7C1E] disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                Next
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

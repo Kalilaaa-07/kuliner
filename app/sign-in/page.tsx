@@ -115,7 +115,7 @@ export default function SignInPage() {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-[#6B705C]">
-              Login untuk mulai menggunakan NutriCater.
+              Login untuk mulai menggunakan NutriCare.
             </p>
           </div>
 

@@ -1,53 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  Home,
-  Package,
-  ClipboardList,
-  User,
   CalendarDays,
+  Search,
+  User,
+  Wallet,
+  MapPin,
+  PackageCheck,
   Clock,
-  Sparkles,
-  CheckCircle2,
 } from "lucide-react";
 import { getCookie } from "@/lib/client-cookie";
+
+type UserData = {
+  id?: number;
+  name?: string;
+  email?: string;
+  fullAddress?: string;
+  addressDetail?: string;
+};
 
 type CateringPlan = {
   id?: number;
   name?: string;
-  description?: string;
   price?: number;
   duration?: number;
-  imageUrl?: string;
-  category?: {
-    id?: number;
-    name?: string;
-  };
 };
 
-type Subscription = {
+export type Subscription = {
   id: number;
-  status?: string;
+  userId?: number;
+  customerId?: number;
   cateringPlanId?: number;
-  durationDays?: number;
-  totalPrice?: number;
+
   startDate?: string;
   endDate?: string;
   createdAt?: string;
-  updatedAt?: string;
+
+  totalPrice?: number;
+  price?: number;
+
+  user?: UserData;
+  customer?: UserData;
   cateringPlan?: CateringPlan;
   plan?: CateringPlan;
 };
 
-function formatRupiah(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-}
+type Meta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+type SubscriptionResponse = {
+  data: Subscription[];
+  meta?: Meta;
+};
 
 function getToken() {
   return getCookie("accessToken") || getCookie("accesstoken") || "";
@@ -58,181 +67,130 @@ function getArrayData<T>(result: any): T[] {
   if (Array.isArray(result?.data)) return result.data;
   if (Array.isArray(result?.data?.data)) return result.data.data;
   if (Array.isArray(result?.subscriptions)) return result.subscriptions;
-  if (Array.isArray(result?.data?.subscriptions)) return result.data.subscriptions;
+  if (Array.isArray(result?.items)) return result.items;
   return [];
 }
 
-function normalizeDate(dateString?: string) {
-  if (!dateString) return null;
-
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return null;
-
-  date.setHours(0, 0, 0, 0);
-  return date;
+function getErrorMessage(result: any, fallback: string) {
+  if (Array.isArray(result?.message)) return result.message.join(", ");
+  return result?.message || fallback;
 }
 
-function addInclusiveDays(date: Date, duration: number) {
-  const newDate = new Date(date);
-
-  // Durasi 7 hari:
-  // hari 1 = tanggal mulai
-  // jadi tanggal selesai = start + 6 hari
-  newDate.setDate(newDate.getDate() + duration - 1);
-  newDate.setHours(0, 0, 0, 0);
-
-  return newDate;
+function formatRupiah(value?: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
 }
 
-function differenceInDays(start: Date, end: Date) {
-  const oneDay = 1000 * 60 * 60 * 24;
-  return Math.floor((end.getTime() - start.getTime()) / oneDay);
-}
+function formatDate(value?: string) {
+  if (!value) return "-";
 
-function formatDateFromDate(date?: Date | null) {
-  if (!date) return "-";
+  const date = new Date(value);
 
-  return date.toLocaleDateString("id-ID", {
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
-  });
+  })
+    .format(date)
+    .replaceAll("/", "-");
 }
 
-function getPlan(subscription: Subscription) {
-  return subscription.cateringPlan || subscription.plan || {};
+function addDaysInclusive(startDate?: string, duration?: number) {
+  if (!startDate) return "-";
+
+  const start = new Date(startDate);
+
+  if (Number.isNaN(start.getTime())) return "-";
+
+  const totalDays = Number(duration || 1);
+  const end = new Date(start);
+
+  // Inclusive: mulai tanggal 1 durasi 7 hari = selesai tanggal 7
+  end.setDate(start.getDate() + totalDays - 1);
+
+  return formatDate(end.toISOString());
 }
 
-function getSubscriptionProgress(subscription: Subscription) {
-  const plan = getPlan(subscription);
-
-  const duration =
-    Number(subscription.durationDays) || Number(plan.duration) || 0;
-
-  const startDate =
-    normalizeDate(subscription.startDate) ||
-    normalizeDate(subscription.createdAt);
-
-  if (!startDate || duration <= 0) {
-    return {
-      duration,
-      currentDay: 0,
-      remainingDays: duration,
-      progressPercent: 0,
-      startText: "-",
-      endText: "-",
-      statusText: "Belum bisa dihitung",
-    };
-  }
-
-  // INI YANG DIBENERIN:
-  // Jangan pakai subscription.endDate dari backend untuk tampilan,
-  // karena backend bisa ngirim 1 hari lebih.
-  const endDate = addInclusiveDays(startDate, duration);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let currentDay = differenceInDays(startDate, today) + 1;
-
-  if (today < startDate) {
-    currentDay = 0;
-  }
-
-  if (currentDay > duration) {
-    currentDay = duration;
-  }
-
-  let remainingDays = differenceInDays(today, endDate) + 1;
-
-  if (today < startDate) {
-    remainingDays = duration;
-  }
-
-  if (remainingDays < 0) {
-    remainingDays = 0;
-  }
-
-  const progressPercent =
-    duration > 0
-      ? Math.min(100, Math.max(0, (currentDay / duration) * 100))
-      : 0;
-
-  let statusText = "Berjalan";
-
-  if (today < startDate) {
-    statusText = "Belum mulai";
-  } else if (today > endDate) {
-    statusText = "Selesai";
-  }
-
-  return {
-    duration,
-    currentDay,
-    remainingDays,
-    progressPercent,
-    startText: formatDateFromDate(startDate),
-    endText: formatDateFromDate(endDate),
-    statusText,
-  };
+function getCustomerName(subscription: Subscription) {
+  return (
+    subscription.user?.name ||
+    subscription.customer?.name ||
+    `Customer #${subscription.userId || subscription.customerId || "-"}`
+  );
 }
 
-function statusStyle(status?: string, calculatedStatus?: string) {
-  const value = (status || calculatedStatus || "").toLowerCase();
-
-  if (value.includes("active") || value.includes("berjalan")) {
-    return {
-      background: "#e8f0c8",
-      color: "#4e6b12",
-      border: "0.5px solid #c2da85",
-      label: "Aktif",
-    };
-  }
-
-  if (value.includes("pending")) {
-    return {
-      background: "#fff8eb",
-      color: "#a06020",
-      border: "0.5px solid #f0c97a",
-      label: "Pending",
-    };
-  }
-
-  if (
-    value.includes("done") ||
-    value.includes("complete") ||
-    value.includes("selesai")
-  ) {
-    return {
-      background: "#eef5d6",
-      color: "#4e6b12",
-      border: "0.5px solid #c2da85",
-      label: "Selesai",
-    };
-  }
-
-  if (value.includes("cancel") || value.includes("reject")) {
-    return {
-      background: "#fff1f1",
-      color: "#b42318",
-      border: "0.5px solid #ffc9c9",
-      label: "Dibatalkan",
-    };
-  }
-
-  return {
-    background: "#f0f5e0",
-    color: "#6a7a4a",
-    border: "0.5px solid #d3e2a0",
-    label: status || calculatedStatus || "Subscription",
-  };
+function getCustomerEmail(subscription: Subscription) {
+  return subscription.user?.email || subscription.customer?.email || "-";
 }
 
-export default function CustomerSubscriptionsPage() {
+function getCustomerAddress(subscription: Subscription) {
+  const fullAddress =
+    subscription.user?.fullAddress || subscription.customer?.fullAddress || "";
+
+  const detail =
+    subscription.user?.addressDetail ||
+    subscription.customer?.addressDetail ||
+    "";
+
+  if (!fullAddress && !detail) return "-";
+
+  return [fullAddress, detail].filter(Boolean).join(", ");
+}
+
+function getPlanName(subscription: Subscription) {
+  return (
+    subscription.cateringPlan?.name ||
+    subscription.plan?.name ||
+    `Plan #${subscription.cateringPlanId || "-"}`
+  );
+}
+
+function getPlanPrice(subscription: Subscription) {
+  return (
+    subscription.totalPrice ||
+    subscription.price ||
+    subscription.cateringPlan?.price ||
+    subscription.plan?.price ||
+    0
+  );
+}
+
+function getPlanDuration(subscription: Subscription) {
+  return subscription.cateringPlan?.duration || subscription.plan?.duration || 1;
+}
+
+function getStartDate(subscription: Subscription) {
+  return subscription.startDate || subscription.createdAt;
+}
+
+function getEndDate(subscription: Subscription) {
+  const startDate = getStartDate(subscription);
+  const duration = getPlanDuration(subscription);
+
+  return addDaysInclusive(startDate, duration);
+}
+
+export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+const LIMIT = 5;
+
+const [meta, setMeta] = useState<Meta>({
+  total: 0,
+  page: 1,
+  limit: LIMIT,
+  totalPages: 1,
+});
+
+  const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
 
-  async function getSubscriptions() {
+  async function getSubscriptions(currentPage = page) {
     try {
       setLoading(true);
 
@@ -246,511 +204,515 @@ export default function CustomerSubscriptionsPage() {
       const token = getToken();
 
       if (!token) {
+        alert("Token tidak ditemukan. Silakan login ulang.");
         window.location.href = "/sign-in";
         return;
       }
 
-      const endpoints = [
-        `${baseUrl}/subscriptions/my`,
-        `${baseUrl}/subscriptions/me`,
-        `${baseUrl}/subscriptions`,
-      ];
+      const params = new URLSearchParams();
+      params.set("page", String(currentPage));
+params.set("limit", String(LIMIT));
 
-      let success = false;
-      let lastMessage = "Gagal mengambil subscriptions";
+      const response = await fetch(`${baseUrl}/subscriptions?${params}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
 
-      for (const endpoint of endpoints) {
-        const response = await fetch(endpoint, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          cache: "no-store",
-        });
+      const result: SubscriptionResponse | any = await response.json();
 
-        const result = await response.json();
+      console.log("GET SUBSCRIPTIONS RESULT:", result);
 
-        if (response.ok) {
-          const data = getArrayData<Subscription>(result);
-          setSubscriptions(data);
-          success = true;
-          break;
-        }
-
-        lastMessage = Array.isArray(result?.message)
-          ? result.message.join(", ")
-          : result?.message || lastMessage;
+      if (!response.ok) {
+        alert(getErrorMessage(result, "Gagal mengambil data subscriptions"));
+        return;
       }
 
-      if (!success) {
-        alert(lastMessage);
-        setSubscriptions([]);
-      }
+      const subscriptionData = getArrayData<Subscription>(result);
+
+      setSubscriptions(subscriptionData);
+
+setMeta(
+  result?.meta ||
+    result?.data?.meta || {
+      total: subscriptionData.length,
+      page: currentPage,
+      limit: LIMIT,
+      totalPages: 1,
+    }
+);
     } catch (error) {
-      console.error("SUBSCRIPTIONS ERROR:", error);
+      console.error("GET SUBSCRIPTIONS ERROR:", error);
       alert("Terjadi kesalahan saat mengambil subscriptions");
-      setSubscriptions([]);
     } finally {
       setLoading(false);
     }
   }
 
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPage(1);
+    getSubscriptions(1);
+  }
+
   useEffect(() => {
-    getSubscriptions();
+    getSubscriptions(1);
   }, []);
 
-  const activeSubscriptions = subscriptions.filter((item) => {
-    const progress = getSubscriptionProgress(item);
-    const status = (item.status || "").toLowerCase();
+  const filteredSubscriptions = subscriptions.filter((subscription) => {
+    const keyword = search.trim().toLowerCase();
+
+    const customerName = getCustomerName(subscription).toLowerCase();
+    const customerEmail = getCustomerEmail(subscription).toLowerCase();
+    const planName = getPlanName(subscription).toLowerCase();
+    const startDate = formatDate(getStartDate(subscription)).toLowerCase();
+    const endDate = getEndDate(subscription).toLowerCase();
+    const id = String(subscription.id);
 
     return (
-      progress.remainingDays > 0 &&
-      !status.includes("cancel") &&
-      !status.includes("reject")
+      !keyword ||
+      customerName.includes(keyword) ||
+      customerEmail.includes(keyword) ||
+      planName.includes(keyword) ||
+      startDate.includes(keyword) ||
+      endDate.includes(keyword) ||
+      id.includes(keyword)
     );
   });
 
+  const stats = [
+    {
+      title: "Total",
+      value: meta.total,
+      icon: "📦",
+      accent: "#6B8E23",
+      bg: "#EEF5D6",
+    },
+    {
+      title: "Current",
+      value: filteredSubscriptions.length,
+      icon: "📋",
+      accent: "#8AAD3A",
+      bg: "#F0F5E0",
+    },
+    {
+      title: "Page",
+      value: meta.page || page,
+      icon: "📄",
+      accent: "#DDA15E",
+      bg: "#FDF3E7",
+    },
+  ];
+
   return (
-    <main
-      className="min-h-screen pb-28"
+    <div
+      className="min-h-screen w-full overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8"
       style={{
         background:
-          "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 55%, #f4f8e8 100%)",
+          "linear-gradient(160deg, #f0f5e0 0%, #fafaf5 60%, #f4f8e8 100%)",
         fontFamily: "'DM Sans', sans-serif",
-        color: "#1e2a04",
       }}
     >
-      {/* HEADER */}
-      <section className="px-5 pt-8">
-        <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="flex items-center gap-1.5">
-              <span
-                className="h-2 w-2 animate-pulse rounded-full"
-                style={{ background: "#6b8e23" }}
-              />
-
-              <p
-                className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "#8a9a62" }}
-              >
-                NutriCater
-              </p>
-            </div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-[0.25em] text-[#6B8E23]">
+              Admin Panel
+            </p>
 
             <h1
-              className="mt-0.5 text-2xl font-bold leading-tight"
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                color: "#1e2a04",
-              }}
+              className="text-3xl font-bold tracking-tight text-[#1e2a04] sm:text-4xl"
+              style={{ fontFamily: "'Playfair Display', serif" }}
             >
               Subscriptions
             </h1>
 
-            <p className="mt-1 max-w-md text-sm leading-6 text-[#6a7a4a]">
-              Lihat paket catering yang sudah kamu subscribe dan progres
-              harinya.
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6B705C]">
+              Kelola subscription customer yang memesan catering plans.
             </p>
           </div>
-
-          <Link
-            href="/customer/customer-plans"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white transition hover:scale-105"
-            style={{
-              background: "linear-gradient(135deg, #6b8e23, #8aad3a)",
-              border: "2px solid #d3e2a0",
-              boxShadow: "0 4px 12px #6b8e2325",
-            }}
-          >
-            <Package size={22} />
-          </Link>
         </div>
 
-        {/* HERO */}
+        {/* WELCOME CARD */}
         <div
-          className="relative mt-5 overflow-hidden rounded-3xl p-6"
+          className="relative overflow-hidden rounded-[28px] p-5 shadow-sm sm:p-7"
           style={{
             background:
-              "linear-gradient(130deg, #4e6b12 0%, #6b8e23 55%, #8aad3a 100%)",
+              "linear-gradient(135deg, #4e6b12 0%, #6b8e23 60%, #9bbd4f 100%)",
+            border: "0.5px solid #3b5c0a",
           }}
         >
-          <div
-            className="absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-10"
-            style={{ background: "#fff" }}
-          />
-          <div
-            className="absolute bottom-0 right-10 h-24 w-24 rounded-full opacity-10"
-            style={{ background: "#fff" }}
-          />
+          <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10" />
+          <div className="absolute bottom-0 right-16 h-28 w-28 rounded-full bg-white/10" />
 
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-semibold"
-                style={{
-                  background: "#ffffff25",
-                  color: "#d4eaa0",
-                  border: "0.5px solid #ffffff40",
-                }}
-              >
-                <Sparkles size={12} />
-                Catering berjalan
-              </span>
+          <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#d7efaa]">
+                Customer Subscriptions
+              </p>
 
               <h2
-                className="mt-2.5 text-xl font-bold leading-snug text-white"
+                className="text-2xl font-bold text-white sm:text-4xl"
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                Pantau hari keberapa
-                <br />
-                catering kamu sekarang.
+                Pantau pesanan subscription customer 📦
               </h2>
 
-              <p className="mt-2 max-w-sm text-xs leading-5 text-[#d4eaa0]">
-                Sistem menghitung progress dari tanggal mulai dan durasi paket.
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-[#e7f5c9]">
+                Lihat customer, paket catering, tanggal mulai sampai tanggal
+                akhir, dan alamat pengiriman.
               </p>
             </div>
 
-            <div className="hidden select-none text-6xl sm:block">📅</div>
+            <div className="w-fit rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-white backdrop-blur">
+              {meta.total} subscriptions
+            </div>
           </div>
         </div>
 
-        {/* QUICK STATS */}
-        <div
-          className="mt-4 grid grid-cols-2 divide-x divide-[#d3e2a0] rounded-2xl py-4"
-          style={{
-            background: "#ffffffcc",
-            border: "0.5px solid #d3e2a0",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          {[
-            {
-              icon: "🥗",
-              label: "Total",
-              value: loading ? "..." : subscriptions.length || "—",
-            },
-            {
-              icon: "✅",
-              label: "Aktif",
-              value: loading ? "..." : activeSubscriptions.length || "—",
-            },
-          ].map(({ icon, label, value }, index) => (
+        {/* STATS */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          {stats.map((item) => (
             <div
-              key={index}
-              className="flex flex-col items-center gap-0.5 px-2 text-center"
+              key={item.title}
+              className="group relative overflow-hidden rounded-2xl bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-4 xl:p-5"
+              style={{ border: "0.5px solid #d3e2a0" }}
             >
-              <span className="text-lg">{icon}</span>
+              <div className="flex items-start justify-between gap-2">
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-base sm:h-10 sm:w-10 sm:text-lg"
+                  style={{
+                    background: item.bg,
+                    border: "0.5px solid #d3e2a0",
+                  }}
+                >
+                  {item.icon}
+                </div>
 
-              <span
-                className="max-w-[90px] truncate text-xs font-bold"
-                style={{ color: "#1e2a04" }}
-              >
-                {value}
-              </span>
+                <div
+                  className="hidden h-8 w-8 rounded-full opacity-20 transition group-hover:scale-125 sm:block"
+                  style={{ background: item.accent }}
+                />
+              </div>
 
-              <span
-                className="text-[10px] font-medium uppercase tracking-wide"
-                style={{ color: "#8a9a62" }}
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-[#8a9a62] sm:text-xs">
+                {item.title}
+              </p>
+
+              <h2
+                className="mt-1 text-2xl font-bold text-[#1e2a04] sm:text-3xl"
+                style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                {label}
-              </span>
+                {loading ? (
+                  <span
+                    className="inline-block h-7 w-12 animate-pulse rounded-lg sm:w-16"
+                    style={{ background: item.bg }}
+                  />
+                ) : (
+                  item.value
+                )}
+              </h2>
+
+              <div
+                className="absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl"
+                style={{ background: item.accent }}
+              />
             </div>
           ))}
         </div>
-      </section>
 
-      {/* LIST */}
-      <section className="mt-7 px-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={14} style={{ color: "#6b8e23" }} />
+        {/* FILTER */}
+        <div
+          className="rounded-[28px] bg-white p-5 shadow-sm sm:p-6"
+          style={{ border: "0.5px solid #d3e2a0" }}
+        >
+          <div className="mb-5 flex items-center gap-3">
+            <div
+              className="h-8 w-1 rounded-full"
+              style={{ background: "#6B8E23" }}
+            />
 
-              <p
-                className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "#6b8e23" }}
+            <div>
+              <h2
+                className="text-xl font-bold text-[#1e2a04]"
+                style={{ fontFamily: "'Playfair Display', serif" }}
               >
-                Riwayat Subscribe
+                Search Subscriptions
+              </h2>
+
+              <p className="text-xs font-medium text-[#8a9a62]">
+                Cari berdasarkan customer, email, nama plan, tanggal, atau ID
               </p>
             </div>
-
-            <h2
-              className="text-xl font-bold"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Paket Catering Kamu
-            </h2>
           </div>
+
+          <form
+            onSubmit={handleSearch}
+            className="grid gap-3 xl:grid-cols-[1fr_auto]"
+          >
+            <div className="relative w-full">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6B8E23]"
+              />
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari subscriptions..."
+                className="w-full rounded-2xl border border-[#DDE5C2] bg-[#F9FAF4] py-3 pl-11 pr-4 text-sm outline-none transition focus:border-[#6B8E23] focus:ring-2 focus:ring-[#DDE5C2]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="rounded-2xl bg-[#283618] px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#1f2b13]"
+            >
+              Search
+            </button>
+          </form>
         </div>
 
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((item) => (
+        {/* DATA */}
+        <div
+          className="overflow-hidden rounded-[28px] bg-white shadow-sm"
+          style={{ border: "0.5px solid #d3e2a0" }}
+        >
+          <div className="flex flex-col gap-3 border-b border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
               <div
-                key={item}
-                className="rounded-3xl p-5"
-                style={{
-                  background: "#ffffffcc",
-                  border: "0.5px solid #d3e2a0",
-                }}
-              >
-                <div className="mb-4 flex gap-4">
-                  <div className="h-20 w-20 shrink-0 animate-pulse rounded-2xl bg-[#e8f0c8]" />
-                  <div className="flex flex-1 flex-col gap-2">
-                    <div className="h-4 w-3/4 animate-pulse rounded-full bg-[#e8f0c8]" />
-                    <div className="h-3 w-1/3 animate-pulse rounded-full bg-[#f0f5e0]" />
-                    <div className="h-3 w-full animate-pulse rounded-full bg-[#f0f5e0]" />
-                  </div>
-                </div>
+                className="h-8 w-1 rounded-full"
+                style={{ background: "#6B8E23" }}
+              />
 
-                <div className="h-3 w-full animate-pulse rounded-full bg-[#e8f0c8]" />
-              </div>
-            ))}
-          </div>
-        ) : subscriptions.length === 0 ? (
-          <div
-            className="flex flex-col items-center rounded-3xl p-8 text-center"
-            style={{
-              background: "#ffffffcc",
-              border: "0.5px solid #d3e2a0",
-            }}
-          >
-            <span className="mb-3 text-5xl">📭</span>
-
-            <p
-              className="font-bold"
-              style={{
-                fontFamily: "'Playfair Display', serif",
-                color: "#1e2a04",
-              }}
-            >
-              Belum ada subscription
-            </p>
-
-            <p className="mt-1.5 text-sm leading-6 text-[#8a9a62]">
-              Kamu belum subscribe paket catering apapun.
-            </p>
-
-            <Link
-              href="/customer/customer-plans"
-              className="mt-5 rounded-2xl px-5 py-3 text-sm font-bold text-white"
-              style={{
-                background: "linear-gradient(135deg, #6b8e23, #8aad3a)",
-              }}
-            >
-              Cari Catering Plan
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {subscriptions.map((subscription) => {
-              const plan = getPlan(subscription);
-              const progress = getSubscriptionProgress(subscription);
-              const style = statusStyle(subscription.status, progress.statusText);
-
-              return (
-                <div
-                  key={subscription.id}
-                  className="rounded-3xl p-4 transition hover:-translate-y-0.5"
-                  style={{
-                    background: "#ffffffee",
-                    border: "0.5px solid #d3e2a0",
-                    boxShadow: "0 2px 12px #1e2a0408",
-                  }}
+              <div>
+                <h2
+                  className="text-xl font-bold text-[#1e2a04]"
+                  style={{ fontFamily: "'Playfair Display', serif" }}
                 >
-                  <div className="flex gap-4">
-                    <div
-                      className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-4xl"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #e8f0c8, #d3e2a0)",
-                      }}
-                    >
-                      {plan.imageUrl ? (
-                        <img
-                          src={plan.imageUrl}
-                          alt={plan.name || "Catering Plan"}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        "🥗"
-                      )}
-                    </div>
+                  Data Subscriptions
+                </h2>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3
-                            className="line-clamp-1 font-bold leading-tight"
-                            style={{ color: "#1e2a04", fontSize: 15 }}
-                          >
-                            {plan.name ||
-                              `Plan #${subscription.cateringPlanId || "-"}`}
-                          </h3>
+                <p className="text-xs font-medium text-[#8a9a62]">
+                  Total data: {filteredSubscriptions.length}
+                </p>
+              </div>
+            </div>
 
-                          <span
-                            className="mt-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                            style={{
-                              background: style.background,
-                              color: style.color,
-                              border: style.border,
-                            }}
-                          >
-                            {style.label}
-                          </span>
-                        </div>
+            <span className="w-fit rounded-full bg-[#e8f0c8] px-3 py-1 text-xs font-bold text-[#4e6b12]">
+              Page {meta.page || page} of {meta.totalPages || 1}
+            </span>
+          </div>
 
-                        <div className="shrink-0 text-right">
-                          <p
-                            className="text-sm font-bold"
-                            style={{
-                              color: "#4e6b12",
-                              fontFamily: "'Playfair Display', serif",
-                            }}
-                          >
-                            {formatRupiah(
-                              Number(subscription.totalPrice || plan.price || 0)
-                            )}
-                          </p>
-                        </div>
-                      </div>
+          {loading ? (
+            <div className="p-6">
+              <div className="space-y-4">
+                {[1, 2, 3].map((item) => (
+                  <div
+                    key={item}
+                    className="h-20 animate-pulse rounded-3xl bg-[#F0F5E0]"
+                  />
+                ))}
+              </div>
+            </div>
+          ) : filteredSubscriptions.length === 0 ? (
+            <div className="flex flex-col items-center py-12 text-center">
+              <span className="mb-3 text-5xl">📭</span>
 
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#6a7a4a]">
-                        {plan.description ||
-                          "Paket catering sehat pilihan kamu."}
-                      </p>
+              <p className="text-sm font-semibold text-[#8a9a62]">
+                Data subscriptions kosong
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* MOBILE + TABLET CARD */}
+              <div className="grid gap-4 p-5 xl:hidden">
+                {filteredSubscriptions.map((subscription) => (
+                  <div
+                    key={subscription.id}
+                    className="rounded-3xl bg-[#F9FAF4] p-5"
+                    style={{ border: "0.5px solid #E8EED0" }}
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
+                          #{subscription.id}
+                        </p>
 
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        <span
-                          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                          style={{
-                            background: "#f0f5e0",
-                            color: "#4e6b12",
-                            border: "0.5px solid #c2da85",
-                          }}
-                        >
-                          <CalendarDays size={11} />
-                          {progress.duration || "-"} hari
-                        </span>
+                        <h3 className="mt-1 break-words text-lg font-bold text-[#1e2a04]">
+                          {getCustomerName(subscription)}
+                        </h3>
 
-                        <span
-                          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                          style={{
-                            background: "#f0f5e0",
-                            color: "#4e6b12",
-                            border: "0.5px solid #c2da85",
-                          }}
-                        >
-                          <Clock size={11} />
-                          Hari ke-{progress.currentDay}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PROGRESS */}
-                  <div className="mt-4">
-                    <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#6a7a4a]">
-                      <span>
-                        {progress.startText} - {progress.endText}
-                      </span>
-
-                      <span>{Math.round(progress.progressPercent)}%</span>
-                    </div>
-
-                    <div className="h-3 overflow-hidden rounded-full bg-[#e8f0c8]">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${progress.progressPercent}%`,
-                          background:
-                            "linear-gradient(135deg, #6b8e23, #8aad3a)",
-                        }}
-                      />
-                    </div>
-
-                    <div
-                      className="mt-3 rounded-2xl px-4 py-3"
-                      style={{
-                        background: "#f6f9ee",
-                        border: "0.5px solid #E8EED0",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 size={16} className="text-[#6B8E23]" />
-
-                        <p className="text-sm font-bold text-[#1e2a04]">
-                          {progress.remainingDays > 0
-                            ? `Sekarang hari ke-${progress.currentDay} dari ${progress.duration} hari.`
-                            : "Subscription ini sudah selesai."}
+                        <p className="mt-1 truncate text-xs font-semibold text-[#6B8E23]">
+                          {getCustomerEmail(subscription)}
                         </p>
                       </div>
                     </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#E8EED0] px-3 py-1 text-xs font-bold text-[#4e6b12]">
+                        <PackageCheck size={13} />
+                        {getPlanName(subscription)}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
+                        <Wallet size={13} />
+                        {formatRupiah(getPlanPrice(subscription))}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6B705C]">
+                        <Clock size={13} />
+                        {getPlanDuration(subscription)} hari
+                      </span>
+                    </div>
+
+                    <div
+                      className="mt-4 rounded-2xl px-4 py-3"
+                      style={{
+                        background: "#ffffff",
+                        border: "0.5px solid #E8EED0",
+                      }}
+                    >
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
+                        Tanggal Subscription
+                      </p>
+
+                      <p className="mt-1 text-sm font-bold leading-6 text-[#283618]">
+                        {formatDate(getStartDate(subscription))} sampai{" "}
+                        {getEndDate(subscription)}
+                      </p>
+                    </div>
+
+                    <div
+                      className="mt-4 rounded-2xl px-4 py-3"
+                      style={{
+                        background: "#ffffff",
+                        border: "0.5px solid #E8EED0",
+                      }}
+                    >
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#8a9a62]">
+                        Address
+                      </p>
+
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#6B705C]">
+                        {getCustomerAddress(subscription)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                ))}
+              </div>
 
-      {/* BOTTOM NAV */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t px-6 py-3"
-        style={{
-          background: "#ffffffee",
-          borderColor: "#d3e2a0",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <div className="mx-auto flex max-w-md items-center justify-between">
-          {[
-            {
-              label: "Home",
-              href: "/customer/home",
-              icon: Home,
-              active: false,
-            },
-            {
-              label: "Plans",
-              href: "/customer/customer-plans",
-              icon: Package,
-              active: false,
-            },
-            {
-              label: "Subs",
-              href: "/customer/subscriptions",
-              icon: ClipboardList,
-              active: true,
-            },
-            {
-              label: "Profile",
-              href: "/customer/profile",
-              icon: User,
-              active: false,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
+              {/* DESKTOP TABLE */}
+              <div className="hidden w-full xl:block">
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col className="w-[7%]" />
+                    <col className="w-[26%]" />
+                    <col className="w-[27%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[18%]" />
+                  </colgroup>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center gap-1 text-[11px] font-semibold"
-                style={{
-                  color: item.active ? "#6b8e23" : "#8a9a62",
-                }}
-              >
-                <Icon size={20} />
-                {item.label}
-              </Link>
-            );
-          })}
+                  <thead className="bg-[#E8EED0]">
+                    <tr>
+                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                        ID
+                      </th>
+
+                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                        Customer
+                      </th>
+
+                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                        Plan
+                      </th>
+
+                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                        Tanggal
+                      </th>
+
+                      <th className="border-b border-[#DDE5C2] p-4 text-left text-xs font-bold uppercase tracking-widest text-[#283618]">
+                        Address
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredSubscriptions.map((subscription) => (
+                      <tr
+                        key={subscription.id}
+                        className="transition hover:bg-[#F6F7EF]"
+                      >
+                        <td className="border-b border-[#E8EED0] p-4 text-sm font-semibold text-[#6B705C]">
+                          #{subscription.id}
+                        </td>
+
+                        <td className="border-b border-[#E8EED0] p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#E8EED0] text-[#4e6b12]">
+                              <User size={18} />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="truncate font-bold text-[#283618]">
+                                {getCustomerName(subscription)}
+                              </p>
+
+                              <p className="mt-1 truncate text-xs font-semibold text-[#6B8E23]">
+                                {getCustomerEmail(subscription)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="border-b border-[#E8EED0] p-4">
+                          <p className="truncate font-bold text-[#283618]">
+                            {getPlanName(subscription)}
+                          </p>
+
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#FDF3E7] px-3 py-1 text-xs font-bold text-[#a06020]">
+                              <Wallet size={13} />
+                              {formatRupiah(getPlanPrice(subscription))}
+                            </span>
+
+                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-bold text-[#6B705C]">
+                              <Clock size={13} />
+                              {getPlanDuration(subscription)} hari
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="border-b border-[#E8EED0] p-4">
+                          <div className="flex flex-col gap-1 text-sm font-semibold text-[#6B705C]">
+                            <span>
+                              Mulai: {formatDate(getStartDate(subscription))}
+                            </span>
+
+                            <span>Selesai: {getEndDate(subscription)}</span>
+                          </div>
+                        </td>
+
+                        <td className="border-b border-[#E8EED0] p-4">
+                          <p className="line-clamp-2 text-xs leading-5 text-[#6B705C]">
+                            <MapPin size={11} className="mr-1 inline" />
+                            {getCustomerAddress(subscription)}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
-      </nav>
-    </main>
+      </div>
+    </div>
   );
-}
+} 

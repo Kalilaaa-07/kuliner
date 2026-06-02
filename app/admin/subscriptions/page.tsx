@@ -177,12 +177,14 @@ function getEndDate(subscription: Subscription) {
 
 export default function AdminSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [meta, setMeta] = useState<Meta>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
+const LIMIT = 5;
+
+const [meta, setMeta] = useState<Meta>({
+  total: 0,
+  page: 1,
+  limit: LIMIT,
+  totalPages: 1,
+});
 
   const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState<number>(1);
@@ -209,7 +211,7 @@ export default function AdminSubscriptionsPage() {
 
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
-      params.set("limit", "10");
+params.set("limit", String(LIMIT));
 
       const response = await fetch(`${baseUrl}/subscriptions?${params}`, {
         method: "GET",
@@ -233,15 +235,15 @@ export default function AdminSubscriptionsPage() {
 
       setSubscriptions(subscriptionData);
 
-      setMeta(
-        result?.meta ||
-          result?.data?.meta || {
-            total: subscriptionData.length,
-            page: currentPage,
-            limit: 10,
-            totalPages: 1,
-          }
-      );
+setMeta(
+  result?.meta ||
+    result?.data?.meta || {
+      total: subscriptionData.length,
+      page: currentPage,
+      limit: LIMIT,
+      totalPages: 1,
+    }
+);
     } catch (error) {
       console.error("GET SUBSCRIPTIONS ERROR:", error);
       alert("Terjadi kesalahan saat mengambil subscriptions");
@@ -725,12 +727,6 @@ export default function AdminSubscriptionsPage() {
             </>
           )}
 
-          {/* PAGINATION */}
-          <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-[#6B705C]">
-              Page {meta.page || page} of {meta.totalPages || 1}
-            </p>
-
             <div className="flex gap-2">
               <button
                 type="button"
@@ -753,6 +749,5 @@ export default function AdminSubscriptionsPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 } 

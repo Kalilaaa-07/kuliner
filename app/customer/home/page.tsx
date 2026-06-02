@@ -226,7 +226,7 @@ const locationText = useMemo(() => {
                 className="text-xs font-semibold uppercase tracking-widest"
                 style={{ color: "#8a9a62" }}
               >
-                NutriCater
+                NutriCare
               </p>
             </div>
 
@@ -580,61 +580,6 @@ const locationText = useMemo(() => {
           </div>
         )}
       </section>
-
-      {/* BOTTOM NAV */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t px-6 py-3"
-        style={{
-          background: "#ffffffee",
-          borderColor: "#d3e2a0",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        <div className="mx-auto flex max-w-md items-center justify-between">
-          {[
-            {
-              label: "Home",
-              href: "/customer/home",
-              icon: Home,
-              active: true,
-            },
-            {
-              label: "Plans",
-              href: "/customer/customer-plans",
-              icon: Package,
-              active: false,
-            },
-            {
-              label: "Subs",
-              href: "/customer/subscriptions",
-              icon: ClipboardList,
-              active: false,
-            },
-            {
-              label: "Profile",
-              href: "/customer/profile",
-              icon: User,
-              active: false,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex flex-col items-center gap-1 text-[11px] font-semibold"
-                style={{
-                  color: item.active ? "#6b8e23" : "#8a9a62",
-                }}
-              >
-                <Icon size={20} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </main>
   );
 }

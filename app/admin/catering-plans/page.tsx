@@ -71,10 +71,12 @@ export default function AdminPlansPage() {
   const [plans, setPlans] = useState<CateringPlan[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
+  const LIMIT = 5;
+
   const [meta, setMeta] = useState<Meta>({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: LIMIT,
     totalPages: 1,
   });
 
@@ -148,7 +150,7 @@ export default function AdminPlansPage() {
 
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
-      params.set("limit", "10");
+      params.set("limit", String(LIMIT));
 
       if (keyword.trim()) {
         params.set("search", keyword.trim());
@@ -182,10 +184,11 @@ export default function AdminPlansPage() {
       setPlans(planData);
 
       setMeta(
-        result?.meta || result?.data?.meta || {
+        result?.meta ||
+        result?.data?.meta || {
           total: planData.length,
           page: currentPage,
-          limit: 10,
+          limit: LIMIT,
           totalPages: 1,
         }
       );
@@ -197,30 +200,16 @@ export default function AdminPlansPage() {
     }
   }
 
-function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  setPage(1);
-}
-
-function handleCategoryChange(value: string) {
-  setCategoryId(value);
-  setPage(1);
-}
-
-  function handlePrevPage() {
-    if (page <= 1) return;
-
-    const newPage = page - 1;
-    setPage(newPage);
-    getPlans(newPage, search, categoryId);
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPage(1);
+    getPlans(1, search, categoryId);
   }
 
-  function handleNextPage() {
-    if (page >= meta.totalPages) return;
-
-    const newPage = page + 1;
-    setPage(newPage);
-    getPlans(newPage, search, categoryId);
+  function handleCategoryChange(value: string) {
+    setCategoryId(value);
+    setPage(1);
+    getPlans(1, search, value);
   }
 
   useEffect(() => {
@@ -228,23 +217,23 @@ function handleCategoryChange(value: string) {
     getPlans(1, "", "");
   }, []);
 
- const filteredPlans = plans.filter((plan) => {
-  const keyword = search.trim().toLowerCase();
+  const filteredPlans = plans.filter((plan) => {
+    const keyword = search.trim().toLowerCase();
 
-  const planCategoryId = plan.categoryId || plan.category?.id;
+    const planCategoryId = plan.categoryId || plan.category?.id;
 
-  const matchSearch =
-    !keyword ||
-    plan.name?.toLowerCase().includes(keyword) ||
-    plan.description?.toLowerCase().includes(keyword) ||
-    plan.category?.name?.toLowerCase().includes(keyword) ||
-    String(plan.id).includes(keyword);
+    const matchSearch =
+      !keyword ||
+      plan.name?.toLowerCase().includes(keyword) ||
+      plan.description?.toLowerCase().includes(keyword) ||
+      plan.category?.name?.toLowerCase().includes(keyword) ||
+      String(plan.id).includes(keyword);
 
-  const matchCategory =
-    !categoryId || String(planCategoryId) === String(categoryId);
+    const matchCategory =
+      !categoryId || String(planCategoryId) === String(categoryId);
 
-  return matchSearch && matchCategory;
-});
+    return matchSearch && matchCategory;
+  });
 
   const activePlans = filteredPlans.filter((plan) => plan.isActive).length;
   const inactivePlans = filteredPlans.filter((plan) => !plan.isActive).length;
@@ -450,11 +439,11 @@ function handleCategoryChange(value: string) {
             >
               <option value="">Semua Category</option>
 
-{categories.map((category) => (
-  <option key={category.id} value={String(category.id)}>
-    {category.name}
-  </option>
-))}
+              {categories.map((category) => (
+                <option key={category.id} value={String(category.id)}>
+                  {category.name}
+                </option>
+              ))}
             </select>
 
             <button
@@ -538,11 +527,10 @@ function handleCategoryChange(value: string) {
                       </div>
 
                       <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                          plan.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${plan.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-orange-100 text-orange-700"
+                          }`}
                       >
                         {plan.isActive ? "Active" : "Inactive"}
                       </span>
@@ -669,11 +657,10 @@ function handleCategoryChange(value: string) {
 
                         <td className="border-b border-[#E8EED0] p-4">
                           <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              plan.isActive
-                                ? "bg-green-100 text-green-700"
-                                : "bg-orange-100 text-orange-700"
-                            }`}
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${plan.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-orange-100 text-orange-700"
+                              }`}
                           >
                             {plan.isActive ? "Active" : "Inactive"}
                           </span>
@@ -704,33 +691,6 @@ function handleCategoryChange(value: string) {
               </div>
             </>
           )}
-
-          {/* PAGINATION */}
-          <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-[#6B705C]">
-              Page {meta.page || page} of {meta.totalPages || 1}
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handlePrevPage}
-                disabled={page <= 1}
-                className="rounded-xl border border-[#DDE5C2] bg-white px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F6F7EF] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Prev
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextPage}
-                disabled={page >= meta.totalPages}
-                className="rounded-xl bg-[#6B8E23] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5B7C1E] disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                Next
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

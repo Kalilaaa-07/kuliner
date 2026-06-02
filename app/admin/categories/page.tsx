@@ -44,13 +44,14 @@ function getErrorMessage(result: any, fallback: string) {
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const LIMIT = 5;
+
   const [meta, setMeta] = useState<Meta>({
     total: 0,
     page: 1,
-    limit: 10,
+    limit: LIMIT,
     totalPages: 1,
   });
-
   const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
@@ -76,7 +77,7 @@ export default function AdminCategoriesPage() {
 
       const params = new URLSearchParams();
       params.set("page", String(currentPage));
-      params.set("limit", "100");
+      params.set("limit", String(LIMIT));
 
       const response = await fetch(`${baseUrl}/categories?${params.toString()}`, {
         method: "GET",
@@ -97,15 +98,14 @@ export default function AdminCategoriesPage() {
       const categoryData = getArrayData<Category>(result);
 
       setCategories(categoryData);
-
       setMeta(
         result?.meta ||
-          result?.data?.meta || {
-            total: categoryData.length,
-            page: currentPage,
-            limit: 100,
-            totalPages: 1,
-          }
+        result?.data?.meta || {
+          total: categoryData.length,
+          page: currentPage,
+          limit: LIMIT,
+          totalPages: 1,
+        }
       );
     } catch (error) {
       console.error("GET CATEGORIES ERROR:", error);
@@ -118,26 +118,11 @@ export default function AdminCategoriesPage() {
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPage(1);
-  }
-
-  function handlePrevPage() {
-    if (page <= 1) return;
-
-    const newPage = page - 1;
-    setPage(newPage);
-    getCategories(newPage);
-  }
-
-  function handleNextPage() {
-    if (page >= meta.totalPages) return;
-
-    const newPage = page + 1;
-    setPage(newPage);
-    getCategories(newPage);
+    getCategories(1);
   }
 
   useEffect(() => {
-    getCategories(1);
+    getCategories();
   }, []);
 
   const filteredCategories = categories.filter((category) => {
@@ -517,32 +502,6 @@ export default function AdminCategoriesPage() {
             </>
           )}
 
-          {/* PAGINATION */}
-          <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-[#6B705C]">
-              Page {meta.page || page} of {meta.totalPages || 1}
-            </p>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handlePrevPage}
-                disabled={page <= 1}
-                className="rounded-xl border border-[#DDE5C2] bg-white px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F6F7EF] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Prev
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextPage}
-                disabled={page >= meta.totalPages}
-                className="rounded-xl bg-[#6B8E23] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#5B7C1E] disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                Next
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -188,7 +188,7 @@ export default function CustomerProfilePage() {
               className="text-xs font-semibold uppercase tracking-widest"
               style={{ color: "#8a9a62" }}
             >
-              NutriCater
+              NutriCare
             </p>
 
             <h1
@@ -498,43 +498,6 @@ export default function CustomerProfilePage() {
           </div>
         </div>
       </section>
-
-      {/* BOTTOM NAVIGATION */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#DDE5C2] bg-white px-6 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        <div className="mx-auto flex max-w-md items-center justify-between">
-          <Link
-            href="/customer/home"
-            className="flex flex-col items-center gap-1 text-[#8A9275]"
-          >
-            <Home size={22} />
-            <span className="text-xs font-bold">Home</span>
-          </Link>
-
-          <Link
-            href="/customer/customer-plans"
-            className="flex flex-col items-center gap-1 text-[#8A9275]"
-          >
-            <Package size={22} />
-            <span className="text-xs font-bold">Plans</span>
-          </Link>
-
-          <Link
-            href="/customer/subscriptions"
-            className="flex flex-col items-center gap-1 text-[#8A9275]"
-          >
-            <ClipboardList size={22} />
-            <span className="text-xs font-bold">Subs</span>
-          </Link>
-
-          <Link
-            href="/customer/profile"
-            className="flex flex-col items-center gap-1 text-[#6B8E23]"
-          >
-            <User size={22} />
-            <span className="text-xs font-bold">Profil</span>
-          </Link>
-        </div>
-      </nav>
     </main>
   );
 }

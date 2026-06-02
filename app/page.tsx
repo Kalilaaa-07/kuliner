@@ -94,7 +94,7 @@ export default function Home() {
 
       const [plansResponse, categoriesResponse, provincesResponse] =
         await Promise.all([
-          fetch(`${baseUrl}/catering-plans?page=1&limit=6`, {
+          fetch(`${baseUrl}/catering-plans?page=1&limit=3`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -130,7 +130,10 @@ export default function Home() {
         setTotalPlans(0);
       } else {
         const planData = getArrayData<CateringPlan>(plansResult);
-        const activePlans = planData.filter((plan) => plan.isActive);
+
+        const activePlans = planData
+          .filter((plan) => plan.isActive)
+          .slice(0, 3);
 
         setPlans(activePlans);
         setTotalPlans(getTotalFromResponse(plansResult, activePlans.length));
@@ -244,7 +247,7 @@ export default function Home() {
             }}
           >
             <span style={{ color: "#6b8e23" }}>Nutri</span>
-            <span style={{ color: "#1e2a04" }}>Cater</span>
+            <span style={{ color: "#1e2a04" }}>Care</span>
           </h1>
         </Link>
 
@@ -300,7 +303,7 @@ export default function Home() {
         </h1>
 
         <p className="mt-5 max-w-2xl text-sm leading-7 text-[#5a6a3a] sm:text-base sm:leading-8">
-          NutriCater membantu kamu melihat paket catering, kategori makanan,
+          NutriCare membantu kamu melihat paket catering, kategori makanan,
           durasi plan, harga, dan pilihan kota yang tersedia.
         </p>
 
@@ -310,7 +313,7 @@ export default function Home() {
             className="flex items-center justify-center gap-2 rounded-full px-7 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 sm:text-base"
             style={{ background: "#6b8e23" }}
           >
-            Mulai Sekarang →
+            Mulai Sekarang
           </Link>
 
           <a
@@ -338,9 +341,8 @@ export default function Home() {
         {stats.map((item, index) => (
           <div
             key={item.label}
-            className={`px-4 py-5 text-center ${
-              index === 0 ? "" : "border-t sm:border-l sm:border-t-0"
-            } border-[#d3e2a0]`}
+            className={`px-4 py-5 text-center ${index === 0 ? "" : "border-t sm:border-l sm:border-t-0"
+              } border-[#d3e2a0]`}
           >
             <div
               className="text-3xl font-bold"
@@ -373,7 +375,7 @@ export default function Home() {
             className="text-3xl font-bold text-[#1e2a04] sm:text-4xl"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
-            Catering Plans yang Tersedia
+            Top 3 Catering Plans.
           </h2>
 
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#6a7a4a]">
@@ -505,7 +507,7 @@ export default function Home() {
               </h3>
 
               <p className="mt-2 text-sm leading-7 text-[#6a7a4a]">
-                NutriCater tersedia di beberapa kota berikut. Pilih lokasi saat
+                NutriCare tersedia di beberapa kota berikut. Pilih lokasi saat
                 daftar akun agar alamat pengiriman sesuai dengan area kamu.
               </p>
             </div>
@@ -559,7 +561,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="relative z-10 mt-16 px-5 pb-7 text-center text-xs text-[#8A9275] sm:mt-20 sm:text-sm">
-        © 2026 NutriCater. Healthy food, clear nutrition.
+        © 2026 NutriCare. Healthy food, clear nutrition.
       </footer>
     </div>
   );

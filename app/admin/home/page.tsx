@@ -431,11 +431,10 @@ export default function AdminDashboardPage() {
               </p>
 
               <h2
-                className={`mt-1 font-bold text-[#1e2a04] ${
-                  item.title === "Income"
-                    ? "text-lg sm:text-xl xl:text-2xl"
-                    : "text-2xl sm:text-3xl"
-                }`}
+                className={`mt-1 font-bold text-[#1e2a04] ${item.title === "Income"
+                  ? "text-lg sm:text-xl xl:text-2xl"
+                  : "text-2xl sm:text-3xl"
+                  }`}
                 style={{ fontFamily: "'Playfair Display', serif" }}
               >
                 {loading ? (

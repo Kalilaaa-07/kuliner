@@ -188,7 +188,7 @@ export default function SignUpPage() {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-[#6B705C]">
-              Buat akun baru untuk mulai menggunakan NutriCater.
+              Buat akun baru untuk mulai menggunakan NutriCare.
             </p>
           </div>
 
