@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Mail,
-  Phone,
   Shield,
   User,
   Sparkles,
@@ -19,7 +18,6 @@ export type AdminProfile = {
   id?: number;
   name: string;
   email: string;
-  phone: string;
   role: string;
 };
 
@@ -90,30 +88,6 @@ function normalizeAdminProfile(result: any): AdminProfile {
     savedProfile?.email ||
     "";
 
-  const phone =
-    data?.phone ||
-    data?.phoneNumber ||
-    data?.whatsappNumber ||
-    data?.noHp ||
-    data?.telephone ||
-    possibleAdmin?.phone ||
-    possibleAdmin?.phoneNumber ||
-    possibleAdmin?.whatsappNumber ||
-    possibleAdmin?.noHp ||
-    possibleAdmin?.telephone ||
-    possibleProfile?.phone ||
-    possibleProfile?.phoneNumber ||
-    possibleProfile?.whatsappNumber ||
-    possibleProfile?.noHp ||
-    possibleProfile?.telephone ||
-    possibleUser?.phone ||
-    possibleUser?.phoneNumber ||
-    possibleUser?.whatsappNumber ||
-    possibleUser?.noHp ||
-    possibleUser?.telephone ||
-    savedProfile?.phone ||
-    "";
-
   const role =
     data?.role ||
     possibleAdmin?.role ||
@@ -126,7 +100,6 @@ function normalizeAdminProfile(result: any): AdminProfile {
     id,
     name,
     email,
-    phone,
     role,
   };
 }
@@ -138,7 +111,6 @@ export default function AdminProfilePage() {
     id: undefined,
     name: "",
     email: "",
-    phone: "",
     role: "ADMIN",
   });
 
@@ -231,11 +203,6 @@ export default function AdminProfilePage() {
       icon: Mail,
     },
     {
-      label: "No. Telepon",
-      value: profile.phone || "-",
-      icon: Phone,
-    },
-    {
       label: "Role",
       value: profile.role || "ADMIN",
       icon: Shield,
@@ -297,7 +264,10 @@ export default function AdminProfilePage() {
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
-            <EditAdminProfile selectedData={profile} onSuccess={setProfile} />
+            <EditAdminProfile
+              selectedData={profile}
+              onSuccess={getAdminProfile}
+            />
 
             <ResetPasswordAdmin />
 
@@ -351,10 +321,6 @@ export default function AdminProfilePage() {
               <p className="mt-2 break-all text-sm leading-6 text-[#e7f5c9]">
                 {profile.email || "Email belum diisi"}
               </p>
-
-              <p className="mt-1 text-sm leading-6 text-[#e7f5c9]">
-                {profile.phone || "No. telepon belum diisi"}
-              </p>
             </div>
           </div>
         </div>
@@ -386,7 +352,7 @@ export default function AdminProfilePage() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
             {detailCards.map((item) => {
               const Icon = item.icon;
 

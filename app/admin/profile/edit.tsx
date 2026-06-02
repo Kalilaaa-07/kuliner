@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { Pencil, Save } from "lucide-react";
+import { getCookie } from "@/lib/client-cookie";
 
 import {
   Dialog,
@@ -12,16 +13,25 @@ import {
 } from "@/components/ui/dialog";
 
 type AdminProfile = {
+  id?: number;
   name: string;
   email: string;
-  phone: string;
   role: string;
 };
 
 type EditAdminProfileProps = {
   selectedData: AdminProfile;
-  onSuccess: (data: AdminProfile) => void;
+  onSuccess: () => void;
 };
+
+function getToken() {
+  return getCookie("accesstoken") || getCookie("accessToken") || "";
+}
+
+function getErrorMessage(result: any, fallback: string) {
+  if (Array.isArray(result?.message)) return result.message.join(", ");
+  return result?.message || fallback;
+}
 
 export default function EditAdminProfile({
   selectedData,
@@ -32,18 +42,16 @@ export default function EditAdminProfile({
 
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [phone, setPhone] = useState<string>("");
-  const [role, setRole] = useState<string>("Admin");
+  const [role, setRole] = useState<string>("ADMIN");
 
   function openModal() {
     setName(selectedData.name || "");
     setEmail(selectedData.email || "");
-    setPhone(selectedData.phone || "");
-    setRole(selectedData.role || "Admin");
+    setRole(selectedData.role || "ADMIN");
     setOpen(true);
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -56,22 +64,52 @@ export default function EditAdminProfile({
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const updatedProfile: AdminProfile = {
-      name,
-      email,
-      phone,
-      role,
-    };
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
 
-    setTimeout(() => {
-      localStorage.setItem("adminProfile", JSON.stringify(updatedProfile));
-      onSuccess(updatedProfile);
-      setLoading(false);
+      if (!baseUrl) {
+        alert("NEXT_PUBLIC_BASE_API_URL belum diisi");
+        return;
+      }
+
+      const token = getToken();
+
+      if (!token) {
+        alert("Token tidak ditemukan. Silakan login ulang.");
+        window.location.href = "/sign-in";
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(getErrorMessage(result, "Gagal memperbarui profile admin"));
+        return;
+      }
+
+      alert(result?.message || "Profile admin berhasil diperbarui");
       setOpen(false);
-      alert("Profile admin berhasil diperbarui");
-    }, 500);
+      onSuccess();
+    } catch (error) {
+      console.error("UPDATE ADMIN PROFILE ERROR:", error);
+      alert("Terjadi kesalahan saat memperbarui profile admin");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const inputClass =
@@ -104,7 +142,6 @@ export default function EditAdminProfile({
 
   return (
     <>
-      {/* Trigger Button */}
       <button
         type="button"
         onClick={openModal}
@@ -131,7 +168,6 @@ export default function EditAdminProfile({
           }}
         >
           <form onSubmit={handleSubmit}>
-            {/* Header */}
             <div
               className="relative overflow-hidden px-7 pb-5 pt-7"
               style={{ borderBottom: "0.5px solid #e8f0c8" }}
@@ -175,12 +211,11 @@ export default function EditAdminProfile({
                   className="mt-0.5 text-xs"
                   style={{ color: "#8a9a62" }}
                 >
-                  Ubah informasi akun administrator NutriCare.
+                  Ubah nama dan email admin. Role tidak bisa diubah.
                 </DialogDescription>
               </div>
             </div>
 
-            {/* Form */}
             <div className="space-y-5 px-7 py-6">
               <div>
                 <label
@@ -227,28 +262,6 @@ export default function EditAdminProfile({
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
                   style={{ color: "#6a7a4a" }}
                 >
-                  No. Telepon
-                </label>
-
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Contoh: 081234567890"
-                  className={inputClass}
-                  style={inputStyle}
-                  onFocus={inputFocusHandler}
-                  onBlur={inputBlurHandler}
-                />
-              </div>
-
-              <div>
-                <label
-                  className="mb-1.5 block text-xs font-semibold uppercase tracking-widest"
-                  style={{ color: "#6a7a4a" }}
-                >
                   Role
                 </label>
 
@@ -262,7 +275,6 @@ export default function EditAdminProfile({
               </div>
             </div>
 
-            {/* Footer */}
             <div
               className="flex items-center justify-end gap-3 px-7 py-5"
               style={{ borderTop: "0.5px solid #e8f0c8" }}
