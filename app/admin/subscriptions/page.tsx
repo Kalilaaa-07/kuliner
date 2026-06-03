@@ -788,33 +788,6 @@ export default function AdminSubscriptionsPage() {
                   </tbody>
                 </table>
               </div>
-
-              {/* PAGINATION */}
-              <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs font-semibold text-[#8a9a62]">
-                  Page {meta.page || page} of {meta.totalPages || 1}
-                </p>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handlePrevPage}
-                    disabled={page <= 1}
-                    className="rounded-2xl border border-[#DDE5C2] px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F0F5E0] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleNextPage}
-                    disabled={page >= meta.totalPages}
-                    className="rounded-2xl bg-[#283618] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#1f2b13] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
             </>
           )}
         </div>

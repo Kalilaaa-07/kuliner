@@ -137,29 +137,6 @@ export default function AdminCategoriesPage() {
     );
   });
 
-  const stats = [
-    {
-      title: "Total",
-      value: meta.total,
-      icon: "🏷️",
-      accent: "#6B8E23",
-      bg: "#EEF5D6",
-    },
-    {
-      title: "Hasil Filter",
-      value: filteredCategories.length,
-      icon: "🔎",
-      accent: "#8AAD3A",
-      bg: "#F0F5E0",
-    },
-    {
-      title: "Page",
-      value: meta.page || page,
-      icon: "📄",
-      accent: "#DDA15E",
-      bg: "#FDF3E7",
-    },
-  ];
 
   return (
     <div
@@ -227,57 +204,6 @@ export default function AdminCategoriesPage() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* STATS */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          {stats.map((item) => (
-            <div
-              key={item.title}
-              className="group relative overflow-hidden rounded-2xl bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-4 xl:p-5"
-              style={{ border: "0.5px solid #d3e2a0" }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-base sm:h-10 sm:w-10 sm:text-lg"
-                  style={{
-                    background: item.bg,
-                    border: "0.5px solid #d3e2a0",
-                  }}
-                >
-                  {item.icon}
-                </div>
-
-                <div
-                  className="hidden h-8 w-8 rounded-full opacity-20 transition group-hover:scale-125 sm:block"
-                  style={{ background: item.accent }}
-                />
-              </div>
-
-              <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-[#8a9a62] sm:text-xs">
-                {item.title}
-              </p>
-
-              <h2
-                className="mt-1 text-2xl font-bold text-[#1e2a04] sm:text-3xl"
-                style={{ fontFamily: "'Playfair Display', serif" }}
-              >
-                {loading ? (
-                  <span
-                    className="inline-block h-7 w-12 animate-pulse rounded-lg sm:w-16"
-                    style={{ background: item.bg }}
-                  />
-                ) : (
-                  item.value
-                )}
-              </h2>
-
-              <div
-                className="absolute bottom-0 left-0 right-0 h-1 rounded-b-2xl"
-                style={{ background: item.accent }}
-              />
-            </div>
-          ))}
         </div>
 
         {/* SEARCH */}

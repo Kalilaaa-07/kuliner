@@ -7,7 +7,6 @@ import {
   Beef,
   Wheat,
   Droplet,
-  Utensils,
   ImageIcon,
 } from "lucide-react";
 import { getCookie } from "@/lib/client-cookie";
@@ -44,6 +43,8 @@ type MealResponse = {
   meta: Meta;
 };
 
+const LIMIT = 5;
+
 function getToken() {
   return getCookie("accessToken") || getCookie("accesstoken") || "";
 }
@@ -53,6 +54,10 @@ function getArrayData<T>(result: any): T[] {
   if (Array.isArray(result?.data)) return result.data;
   if (Array.isArray(result?.data?.data)) return result.data.data;
   if (Array.isArray(result?.meals)) return result.meals;
+  if (Array.isArray(result?.items)) return result.items;
+  if (Array.isArray(result?.data?.meals)) return result.data.meals;
+  if (Array.isArray(result?.data?.items)) return result.data.items;
+
   return [];
 }
 
@@ -61,10 +66,48 @@ function getErrorMessage(result: any, fallback: string) {
   return result?.message || fallback;
 }
 
+async function readJsonSafe(response: Response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { message: text };
+  }
+}
+
+function getMeta(result: any, dataLength: number, currentPage: number): Meta {
+  const metaData = result?.meta || result?.data?.meta || {};
+
+  const total =
+    Number(
+      metaData?.total ||
+      metaData?.totalData ||
+      metaData?.totalItems ||
+      result?.total ||
+      result?.data?.total ||
+      dataLength
+    ) || dataLength;
+
+  const totalPages =
+    Number(
+      metaData?.totalPages ||
+      metaData?.lastPage ||
+      result?.totalPages ||
+      result?.data?.totalPages ||
+      Math.ceil(total / LIMIT)
+    ) || 1;
+
+  return {
+    total,
+    page: Number(metaData?.page || currentPage),
+    limit: Number(metaData?.limit || LIMIT),
+    totalPages: Math.max(totalPages, 1),
+  };
+}
+
 export default function AdminMealsPage() {
   const [meals, setMeals] = useState<Meal[]>([]);
-  const LIMIT = 5;
-
   const [meta, setMeta] = useState<Meta>({
     total: 0,
     page: 1,
@@ -103,16 +146,21 @@ export default function AdminMealsPage() {
         params.set("search", keyword.trim());
       }
 
-      const response = await fetch(`${baseUrl}/meals?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `${baseUrl}/meals/paginated?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        }
+      );
 
-      const result: MealResponse | any = await response.json();
+      const result: MealResponse | any = await readJsonSafe(response);
+
+      console.log("GET MEALS RESULT:", result);
 
       if (!response.ok) {
         alert(getErrorMessage(result, "Gagal mengambil data meals"));
@@ -122,16 +170,7 @@ export default function AdminMealsPage() {
       const mealData = getArrayData<Meal>(result);
 
       setMeals(mealData);
-
-      setMeta(
-        result?.meta ||
-        result?.data?.meta || {
-          total: mealData.length,
-          page: currentPage,
-          limit: LIMIT,
-          totalPages: 1,
-        }
-      );
+      setMeta(getMeta(result, mealData.length, currentPage));
     } catch (error) {
       console.error("GET MEALS ERROR:", error);
       alert("Terjadi kesalahan saat mengambil meals");
@@ -144,6 +183,22 @@ export default function AdminMealsPage() {
     e.preventDefault();
     setPage(1);
     getMeals(1, search);
+  }
+
+  function handlePrevPage() {
+    if (page <= 1) return;
+
+    const newPage = page - 1;
+    setPage(newPage);
+    getMeals(newPage, search);
+  }
+
+  function handleNextPage() {
+    if (page >= displayTotalPages) return;
+
+    const newPage = page + 1;
+    setPage(newPage);
+    getMeals(newPage, search);
   }
 
   useEffect(() => {
@@ -162,6 +217,16 @@ export default function AdminMealsPage() {
       String(meal.id).includes(keyword)
     );
   });
+
+  const displayedMeals =
+    filteredMeals.length > LIMIT
+      ? filteredMeals.slice((page - 1) * LIMIT, page * LIMIT)
+      : filteredMeals;
+
+  const displayTotalPages =
+    filteredMeals.length > LIMIT
+      ? Math.ceil(filteredMeals.length / LIMIT)
+      : meta.totalPages;
 
   const stats = [
     {
@@ -252,6 +317,10 @@ export default function AdminMealsPage() {
                 dan ingredients agar data catering plan lebih lengkap.
               </p>
             </div>
+
+            <div className="w-fit rounded-2xl bg-white/15 px-4 py-3 text-sm font-semibold text-white backdrop-blur">
+              {meta.total} meals tersedia
+            </div>
           </div>
         </div>
 
@@ -326,7 +395,7 @@ export default function AdminMealsPage() {
               </h2>
 
               <p className="text-xs font-medium text-[#8a9a62]">
-                Cari meal berdasarkan nama, ingredients, atau catering plan
+                Cari meal berdasarkan nama, ingredients, atau catering plan.
               </p>
             </div>
           </div>
@@ -413,7 +482,7 @@ export default function AdminMealsPage() {
             <>
               {/* MOBILE + TABLET CARD */}
               <div className="grid gap-4 p-5 xl:hidden">
-                {filteredMeals.map((meal) => (
+                {displayedMeals.map((meal) => (
                   <div
                     key={meal.id}
                     className="rounded-3xl bg-[#F9FAF4] p-5"
@@ -630,6 +699,33 @@ export default function AdminMealsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* PAGINATION */}
+              <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold text-[#8a9a62]">
+                  Page {page} of {displayTotalPages || 1}
+                </p>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrevPage}
+                    disabled={page <= 1}
+                    className="rounded-2xl border border-[#DDE5C2] px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F0F5E0] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextPage}
+                    disabled={page >= displayTotalPages}
+                    className="rounded-2xl bg-[#283618] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#1f2b13] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </>
           )}
