@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  CalendarDays,
   Search,
   User,
   Wallet,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { getCookie } from "@/lib/client-cookie";
 import DeleteSubscription from "./delete";
+import ExportSubscriptions from "./export";
 
 type UserData = {
   id?: number;
@@ -195,20 +195,20 @@ function getMeta(result: any, dataLength: number, currentPage: number): Meta {
   const total =
     Number(
       metaData?.total ||
-      metaData?.totalData ||
-      metaData?.totalItems ||
-      result?.total ||
-      result?.data?.total ||
-      dataLength
+        metaData?.totalData ||
+        metaData?.totalItems ||
+        result?.total ||
+        result?.data?.total ||
+        dataLength
     ) || dataLength;
 
   const totalPages =
     Number(
       metaData?.totalPages ||
-      metaData?.lastPage ||
-      result?.totalPages ||
-      result?.data?.totalPages ||
-      Math.ceil(total / LIMIT)
+        metaData?.lastPage ||
+        result?.totalPages ||
+        result?.data?.totalPages ||
+        Math.ceil(total / LIMIT)
     ) || 1;
 
   return {
@@ -534,22 +534,29 @@ export default function AdminSubscriptionsPage() {
           className="overflow-hidden rounded-[28px] bg-white shadow-sm"
           style={{ border: "0.5px solid #d3e2a0" }}
         >
-          <div className="flex flex-col gap-3 border-b border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4 border-b border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
               <div
-                className="h-8 w-1 rounded-full"
+                className="mt-1 h-10 w-1 rounded-full"
                 style={{ background: "#6B8E23" }}
               />
 
               <div>
-                <h2
-                  className="text-xl font-bold text-[#1e2a04]"
-                  style={{ fontFamily: "'Playfair Display', serif" }}
-                >
-                  Data Subscriptions
-                </h2>
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                  <h1 className="text-2xl font-bold text-[#283618]">
+                    Data Subscriptions
+                  </h1>
 
-                <p className="text-xs font-medium text-[#8a9a62]">
+                  <p className="text-sm text-[#6B705C]">
+                    Kelola data subscription customer.
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <ExportSubscriptions subscriptions={filteredSubscriptions} />
+                </div>
+
+                <p className="mt-2 text-xs font-medium text-[#8a9a62]">
                   Total data: {filteredSubscriptions.length}
                 </p>
               </div>
@@ -672,7 +679,7 @@ export default function AdminSubscriptionsPage() {
                 ))}
               </div>
 
-              {/* DESKTOP TABLE - TANPA GESER */}
+              {/* DESKTOP TABLE */}
               <div className="hidden w-full xl:block">
                 <table className="w-full table-fixed">
                   <colgroup>
@@ -780,6 +787,33 @@ export default function AdminSubscriptionsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* PAGINATION */}
+              <div className="flex flex-col gap-3 border-t border-[#E8EED0] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold text-[#8a9a62]">
+                  Page {meta.page || page} of {meta.totalPages || 1}
+                </p>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrevPage}
+                    disabled={page <= 1}
+                    className="rounded-2xl border border-[#DDE5C2] px-4 py-2 text-sm font-bold text-[#283618] transition hover:bg-[#F0F5E0] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextPage}
+                    disabled={page >= meta.totalPages}
+                    className="rounded-2xl bg-[#283618] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#1f2b13] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </>
           )}
